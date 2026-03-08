@@ -110,7 +110,7 @@ export default function LoginPage() {
               Continue with Google
             </Button>
 
-            <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground bg-gradient-to-r from-primary/5 to-accent/5 px-3 py-2 rounded-lg border border-primary/10">
+            <div className="flex items-center justify-center gap-1.5 text-xs font-medium text-foreground bg-gradient-to-r from-primary/5 to-accent/5 px-3 py-2 rounded-lg border border-primary/10">
               <Lock className="h-3 w-3 text-primary" aria-hidden="true" />
               <span>Your data is encrypted and never shared</span>
             </div>
