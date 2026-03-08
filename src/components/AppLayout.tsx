@@ -15,6 +15,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, History, User, LogOut } from "lucide-react";
 
