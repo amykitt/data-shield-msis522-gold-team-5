@@ -74,10 +74,10 @@ export default function LoginPage() {
                 initial={{ opacity: 0, x: -16 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 + i * 0.1, duration: 0.4 }}
-                className="flex items-center gap-3 rounded-lg border bg-card/80 px-4 py-3 text-left backdrop-blur-sm"
+                className="flex items-center gap-3 rounded-lg border border-primary/20 bg-gradient-to-br from-card via-card to-primary/5 px-4 py-3 text-left backdrop-blur-md shadow-md shadow-primary/10 hover:shadow-lg hover:shadow-primary/15 transition-all"
                 role="listitem"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary/20 to-primary/10">
                   <f.icon className="h-4.5 w-4.5 text-primary" aria-hidden="true" />
                 </div>
                 <div>
