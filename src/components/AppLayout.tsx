@@ -15,6 +15,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, History, User, LogOut } from "lucide-react";
 
@@ -27,10 +28,13 @@ const navItems = [
 function DesktopSidebar() {
   const { logout } = useAuth();
 
+  const { state } = useSidebar();
+  const collapsed = state === "collapsed";
+
   return (
     <Sidebar collapsible="icon" aria-label="Main navigation">
-      <div className="flex h-14 items-center gap-2 border-b px-4">
-        <ShieldLogo size="sm" />
+      <div className="flex h-14 items-center gap-2 border-b px-4 overflow-hidden">
+        {!collapsed && <ShieldLogo size="sm" />}
       </div>
       <SidebarContent>
         <SidebarGroup>
