@@ -50,10 +50,10 @@ export default function LoginPage() {
             </motion.div>
 
             <div>
-              <h1 className="bg-gradient-to-r from-primary via-primary to-primary/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl">
+              <h1 className="bg-gradient-to-r from-primary via-blue-600 to-blue-700 bg-clip-text text-4xl font-bold tracking-tight text-transparent sm:text-5xl">
                 Privacy Shield
               </h1>
-              <p className="mx-auto mt-3 max-w-xs text-base text-muted-foreground">
+              <p className="mx-auto mt-3 max-w-xs text-base font-medium text-foreground">
                 Your personal data removal agent. Take back control of your online privacy.
               </p>
             </div>
