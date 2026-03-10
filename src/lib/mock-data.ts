@@ -95,7 +95,7 @@ export const mockBrokerSites: BrokerSite[] = [
     status: "found",
     foundData: {
       fields: ["Full Name", "Address", "Phone", "Court Records", "Social Profiles"],
-      optOutMessage: "Dear Radaris,\n\nI request the removal of my personal information from your database.\n\nName: John Doe\nProxy Email: shield-a7x29k@privacyshield.io\n\nPlease comply within 72 hours.",
+      optOutMessage: "Dear Radaris,\n\nI request the removal of my personal information from your database.\n\nName: John Doe\nProxy Email: shield-a7x29k@detraceme.io\n\nPlease comply within 72 hours.",
     },
   },
   {
