@@ -1,10 +1,15 @@
-import { Progress } from "@/components/ui/progress";
-import { mockBrokerSites, getScanSummary } from "@/lib/mock-data";
 import { motion } from "framer-motion";
 import { Shield } from "lucide-react";
 
-export function ScanProgress() {
-  const summary = getScanSummary(mockBrokerSites);
+import { Progress } from "@/components/ui/progress";
+import { getScanSummary, type BrokerSite } from "@/lib/mock-data";
+
+interface ScanProgressProps {
+  sites: BrokerSite[];
+}
+
+export function ScanProgress({ sites }: ScanProgressProps) {
+  const summary = getScanSummary(sites);
   const completed = summary.total - summary.scanning;
   const pct = Math.round((completed / summary.total) * 100);
 

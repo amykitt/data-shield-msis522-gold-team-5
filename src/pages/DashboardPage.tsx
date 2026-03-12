@@ -1,13 +1,20 @@
 import { useState } from "react";
-import { SummaryBar } from "@/components/SummaryBar";
-import { ScanProgress } from "@/components/ScanProgress";
-import { ScanTable } from "@/components/ScanTable";
+
 import { ChatBar } from "@/components/ChatBar";
 import { ListingDetailPanel } from "@/components/ListingDetailPanel";
-import { mockBrokerSites, type BrokerSite } from "@/lib/mock-data";
+import { ScanProgress } from "@/components/ScanProgress";
+import { ScanTable } from "@/components/ScanTable";
+import { SummaryBar } from "@/components/SummaryBar";
+import { useAgentChat, useAgentDashboard } from "@/hooks/use-agent-dashboard";
+import { mockBrokerSites, mockChatMessages, type BrokerSite } from "@/lib/mock-data";
 
 export default function DashboardPage() {
   const [selectedSite, setSelectedSite] = useState<BrokerSite | null>(null);
+  const dashboardQuery = useAgentDashboard();
+  const chatMutation = useAgentChat();
+
+  const brokerSites = dashboardQuery.data?.brokerSites ?? mockBrokerSites;
+  const chatMessages = dashboardQuery.data?.chatMessages ?? mockChatMessages;
 
   return (
     <div className="flex h-full flex-col gap-4 p-4 md:p-6">
@@ -16,16 +23,18 @@ export default function DashboardPage() {
         <p className="text-sm text-muted-foreground">Monitor and manage your data removal requests</p>
       </div>
 
-      <ScanProgress />
-      <SummaryBar />
-      <ScanTable sites={mockBrokerSites} onSelectSite={setSelectedSite} />
-      <ChatBar />
-
-      <ListingDetailPanel
-        site={selectedSite}
-        open={!!selectedSite}
-        onClose={() => setSelectedSite(null)}
+      <ScanProgress sites={brokerSites} />
+      <SummaryBar sites={brokerSites} />
+      <ScanTable sites={brokerSites} onSelectSite={setSelectedSite} />
+      <ChatBar
+        messages={chatMessages}
+        isSending={chatMutation.isPending}
+        onSend={async (message) => {
+          await chatMutation.mutateAsync(message);
+        }}
       />
+
+      <ListingDetailPanel site={selectedSite} open={!!selectedSite} onClose={() => setSelectedSite(null)} />
     </div>
   );
 }

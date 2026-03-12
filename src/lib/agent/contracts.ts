@@ -1,0 +1,452 @@
+import { z } from "zod";
+
+export const agentRunPhaseSchema = z.enum([
+  "intake",
+  "scan",
+  "match",
+  "retrieve_procedure",
+  "draft",
+  "approval",
+  "execution",
+  "verification",
+  "logging",
+  "completed",
+]);
+
+export const agentRunStatusSchema = z.enum([
+  "queued",
+  "in_progress",
+  "awaiting_user",
+  "blocked",
+  "completed",
+  "failed",
+  "canceled",
+]);
+
+export const reviewReasonSchema = z.enum([
+  "ambiguous_match",
+  "captcha",
+  "email_confirmation_required",
+  "legal_hold",
+  "low_confidence_match",
+  "manual_submission_required",
+  "missing_required_input",
+  "missing_procedure",
+  "procedure_unknown",
+  "contradictory_procedure",
+  "rate_limited",
+  "site_unreachable",
+  "stale_procedure",
+]);
+
+export const submissionChannelSchema = z.enum([
+  "webform",
+  "email",
+  "mail",
+  "phone",
+  "unsupported",
+]);
+
+export const procedureTypeSchema = z.enum(["email", "webform", "procedure_unknown"]);
+
+export const intentActionSchema = z.enum([
+  "scan_only",
+  "draft_opt_out",
+  "submit_opt_out",
+  "rescan",
+  "status_check",
+]);
+
+export const matchDecisionLabelSchema = z.enum([
+  "exact_match",
+  "likely_match",
+  "possible_match",
+  "no_match",
+]);
+
+export const executionModeSchema = z.enum([
+  "auto",
+  "human_assisted",
+  "blocked",
+]);
+
+export const procedureSourceSchema = z.enum([
+  "rag",
+  "manual",
+  "policy",
+  "cached",
+]);
+
+export const procedureStepActionSchema = z.enum([
+  "navigate",
+  "search",
+  "fill",
+  "select",
+  "click",
+  "submit",
+  "wait",
+  "check_email",
+  "manual_review",
+]);
+
+export const fieldValueSchema = z.union([
+  z.string(),
+  z.number(),
+  z.boolean(),
+  z.array(z.string()),
+]);
+
+export const extractedFieldSchema = z.object({
+  field: z.string().min(1),
+  value: fieldValueSchema,
+  normalizedValue: z.string().optional(),
+});
+
+export const seedProfileSchema = z.object({
+  full_name: z.string().min(1),
+  name_variants: z.array(z.string().min(1)).default([]),
+  location: z.object({
+    city: z.string().min(1),
+    state: z.string().min(1),
+  }),
+  approx_age: z.string().nullable(),
+  privacy_email: z.string().email(),
+  optional: z.object({
+    phone_last4: z.string().nullable().default(null),
+    prior_cities: z.array(z.string().min(1)).default([]),
+  }).default({
+    phone_last4: null,
+    prior_cities: [],
+  }),
+  consent: z.literal(true),
+});
+
+export const searchProfileSchema = z.object({
+  profileId: z.string().min(1),
+  firstName: z.string().min(1),
+  lastName: z.string().min(1),
+  middleName: z.string().optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
+  dateOfBirth: z.string().optional(),
+  proxyEmail: z.string().email().optional(),
+});
+
+export const userIntentSchema = z.object({
+  requestText: z.string().min(1),
+  requestedActions: z.array(intentActionSchema).min(1),
+  requestedSites: z.array(z.string().min(1)).default([]),
+  geographicHint: z.string().optional(),
+  requiresUserApprovalBeforeSubmission: z.boolean().default(true),
+});
+
+export const searchTargetSchema = z.object({
+  siteId: z.string().min(1),
+  siteName: z.string().min(1),
+  query: z.string().min(1),
+  jurisdictionHint: z.string().optional(),
+});
+
+export const evidenceSchema = z.object({
+  sourceType: z.enum(["search_result", "listing_page", "procedure_doc", "execution_log", "user_input"]),
+  sourceUrl: z.string().url().optional(),
+  excerpt: z.string().min(1),
+  capturedAt: z.string().datetime(),
+  fields: z.array(extractedFieldSchema).default([]),
+});
+
+export const listingCandidateSchema = z.object({
+  candidateId: z.string().min(1),
+  siteId: z.string().min(1),
+  siteName: z.string().min(1),
+  listingUrl: z.string().url(),
+  displayName: z.string().min(1),
+  extractedFields: z.array(extractedFieldSchema).min(1),
+  evidence: z.array(evidenceSchema).min(1),
+});
+
+export const discoveryCandidateExtractedSchema = z.object({
+  name: z.string().min(1),
+  age: z.string().nullable(),
+  addresses: z.array(z.string().min(1)).default([]),
+  relatives: z.array(z.string().min(1)).default([]),
+  phones: z.array(z.string().min(1)).default([]),
+});
+
+export const discoveryCandidateSchema = z.object({
+  url: z.string().url(),
+  extracted: discoveryCandidateExtractedSchema,
+  match_confidence: z.number().min(0).max(1),
+  evidence_snippets: z.array(z.string().min(1)).min(1),
+});
+
+export const discoveryResultSchema = z.object({
+  site: z.string().min(1),
+  scan_timestamp: z.string().datetime(),
+  found: z.boolean(),
+  candidates: z.array(discoveryCandidateSchema).default([]),
+  notes: z.string().nullable(),
+}).superRefine((value, ctx) => {
+  if (!value.found && value.candidates.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Discovery results with found=false cannot include candidates.",
+      path: ["candidates"],
+    });
+  }
+});
+
+export const matchDecisionSchema = z.object({
+  siteId: z.string().min(1),
+  candidateId: z.string().min(1),
+  decision: matchDecisionLabelSchema,
+  confidence: z.number().min(0).max(1),
+  rationale: z.string().min(1),
+  evidence: z.array(evidenceSchema).min(1),
+  reviewReasons: z.array(reviewReasonSchema).default([]),
+});
+
+export const procedureInputRequirementSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  required: z.boolean(),
+  source: z.enum(["profile", "listing", "system", "user"]),
+});
+
+export const procedureStepSchema = z.object({
+  stepId: z.string().min(1),
+  action: procedureStepActionSchema,
+  instruction: z.string().min(1),
+  selector: z.string().optional(),
+  targetUrl: z.string().url().optional(),
+  inputKey: z.string().optional(),
+  required: z.boolean().default(true),
+});
+
+export const procedureSourceChunkSchema = z.object({
+  doc_id: z.string().min(1),
+  quote: z.string().min(1),
+});
+
+export const procedureRetrievalSchema = z.object({
+  site: z.string().min(1),
+  procedure_type: procedureTypeSchema,
+  required_fields: z.array(z.string().min(1)).default([]),
+  steps: z.array(z.string().min(1)).default([]),
+  source_chunks: z.array(procedureSourceChunkSchema).default([]),
+}).superRefine((value, ctx) => {
+  if (value.procedure_type !== "procedure_unknown" && value.source_chunks.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Known procedures must cite retrieved source chunks.",
+      path: ["source_chunks"],
+    });
+  }
+});
+
+export const procedureSelectionSchema = z.object({
+  siteId: z.string().min(1),
+  procedureId: z.string().min(1),
+  source: procedureSourceSchema,
+  sourceDocumentUri: z.string().min(1),
+  sourceVersion: z.string().min(1),
+  retrievedAt: z.string().datetime(),
+  submissionChannel: submissionChannelSchema,
+  freshnessDays: z.number().int().nonnegative(),
+  isComplete: z.boolean(),
+  requiredInputs: z.array(procedureInputRequirementSchema),
+  steps: z.array(procedureStepSchema).min(1),
+  reviewReasons: z.array(reviewReasonSchema).default([]),
+}).superRefine((value, ctx) => {
+  if (!value.isComplete && value.reviewReasons.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Incomplete procedures must include at least one review reason.",
+      path: ["reviewReasons"],
+    });
+  }
+});
+
+export const optOutDraftSchema = z.object({
+  draftId: z.string().min(1),
+  siteId: z.string().min(1),
+  candidateId: z.string().min(1),
+  submissionChannel: submissionChannelSchema,
+  subject: z.string().optional(),
+  body: z.string().min(1),
+  factsUsed: z.array(extractedFieldSchema).min(1),
+  procedureId: z.string().min(1),
+  generatedAt: z.string().datetime(),
+});
+
+export const submissionEmailSchema = z.object({
+  to: z.string().email(),
+  subject: z.string().min(1),
+  body: z.string().min(1),
+});
+
+export const submissionFormFieldSchema = z.object({
+  name: z.string().min(1),
+  value: z.string().min(1),
+});
+
+export const submissionWebformSchema = z.object({
+  fields: z.array(submissionFormFieldSchema).default([]),
+  consent_checkboxes: z.array(z.string().min(1)).default([]),
+});
+
+export const submissionPayloadSchema = z.object({
+  site: z.string().min(1),
+  candidate_url: z.string().url(),
+  procedure_type: z.enum(["email", "webform"]),
+  email: submissionEmailSchema.optional(),
+  webform: submissionWebformSchema.optional(),
+}).superRefine((value, ctx) => {
+  if (value.procedure_type === "email" && !value.email) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Email procedures require an email payload.",
+      path: ["email"],
+    });
+  }
+  if (value.procedure_type === "webform" && !value.webform) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Webform procedures require a webform payload.",
+      path: ["webform"],
+    });
+  }
+});
+
+export const actionPayloadSchema = z.object({
+  siteId: z.string().min(1),
+  candidateId: z.string().min(1),
+  procedureId: z.string().min(1),
+  procedureVersion: z.string().min(1),
+  submissionChannel: submissionChannelSchema,
+  fields: z.record(z.string(), fieldValueSchema),
+  steps: z.array(procedureStepSchema).min(1),
+  draft: optOutDraftSchema,
+});
+
+export const actionHandoffSchema = z.object({
+  handoffId: z.string().min(1),
+  mode: executionModeSchema,
+  requiresUserApproval: z.boolean(),
+  reviewReasons: z.array(reviewReasonSchema).default([]),
+  payload: actionPayloadSchema,
+  createdAt: z.string().datetime(),
+}).superRefine((value, ctx) => {
+  if (value.mode !== "auto" && value.reviewReasons.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Non-auto handoffs must include review reasons.",
+      path: ["reviewReasons"],
+    });
+  }
+});
+
+export const executionConfirmationSchema = z.object({
+  ticket: z.string().nullable(),
+  page_text: z.string().nullable(),
+  screenshot_ref: z.string().nullable(),
+});
+
+export const executionResultSchema = z.object({
+  site: z.string().min(1),
+  candidate_url: z.string().url(),
+  status: z.enum(["submitted", "pending", "failed", "manual_required"]),
+  confirmation: executionConfirmationSchema,
+  error: z.string().nullable(),
+});
+
+export const workflowEventSchema = z.object({
+  eventId: z.string().min(1),
+  runId: z.string().min(1),
+  phase: agentRunPhaseSchema,
+  status: agentRunStatusSchema,
+  message: z.string().min(1),
+  createdAt: z.string().datetime(),
+  siteId: z.string().optional(),
+  candidateId: z.string().optional(),
+  reviewReasons: z.array(reviewReasonSchema).default([]),
+});
+
+export const executionOutcomeSchema = z.object({
+  siteId: z.string().min(1),
+  candidateId: z.string().min(1),
+  status: z.enum(["submitted", "confirmed", "failed", "needs_follow_up"]),
+  confirmationId: z.string().optional(),
+  observedAt: z.string().datetime(),
+  evidence: z.array(evidenceSchema).default([]),
+  reviewReasons: z.array(reviewReasonSchema).default([]),
+});
+
+export const agentPolicySchema = z.object({
+  match_confidence_threshold: z.number().min(0).max(1).default(0.75),
+  max_submission_retries: z.number().int().min(0).default(1),
+  require_explicit_consent: z.boolean().default(true),
+  minimize_pii: z.boolean().default(true),
+  require_retrieval_grounding: z.boolean().default(true),
+});
+
+export const agentRunStateSchema = z.object({
+  runId: z.string().min(1),
+  profile: searchProfileSchema,
+  intent: userIntentSchema,
+  currentPhase: agentRunPhaseSchema,
+  status: agentRunStatusSchema,
+  consentConfirmed: z.boolean(),
+  targets: z.array(searchTargetSchema).default([]),
+  candidates: z.array(listingCandidateSchema).default([]),
+  matchDecisions: z.array(matchDecisionSchema).default([]),
+  procedures: z.array(procedureSelectionSchema).default([]),
+  drafts: z.array(optOutDraftSchema).default([]),
+  handoffs: z.array(actionHandoffSchema).default([]),
+  outcomes: z.array(executionOutcomeSchema).default([]),
+  pendingReviewReasons: z.array(reviewReasonSchema).default([]),
+  timeline: z.array(workflowEventSchema).default([]),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime(),
+});
+
+export type AgentRunPhase = z.infer<typeof agentRunPhaseSchema>;
+export type AgentRunStatus = z.infer<typeof agentRunStatusSchema>;
+export type ReviewReason = z.infer<typeof reviewReasonSchema>;
+export type SubmissionChannel = z.infer<typeof submissionChannelSchema>;
+export type ProcedureType = z.infer<typeof procedureTypeSchema>;
+export type IntentAction = z.infer<typeof intentActionSchema>;
+export type MatchDecisionLabel = z.infer<typeof matchDecisionLabelSchema>;
+export type ExecutionMode = z.infer<typeof executionModeSchema>;
+export type ProcedureSource = z.infer<typeof procedureSourceSchema>;
+export type ProcedureStepAction = z.infer<typeof procedureStepActionSchema>;
+export type ExtractedField = z.infer<typeof extractedFieldSchema>;
+export type SeedProfile = z.infer<typeof seedProfileSchema>;
+export type SearchProfile = z.infer<typeof searchProfileSchema>;
+export type UserIntent = z.infer<typeof userIntentSchema>;
+export type SearchTarget = z.infer<typeof searchTargetSchema>;
+export type Evidence = z.infer<typeof evidenceSchema>;
+export type ListingCandidate = z.infer<typeof listingCandidateSchema>;
+export type DiscoveryCandidateExtracted = z.infer<typeof discoveryCandidateExtractedSchema>;
+export type DiscoveryCandidate = z.infer<typeof discoveryCandidateSchema>;
+export type DiscoveryResult = z.infer<typeof discoveryResultSchema>;
+export type MatchDecision = z.infer<typeof matchDecisionSchema>;
+export type ProcedureInputRequirement = z.infer<typeof procedureInputRequirementSchema>;
+export type ProcedureStep = z.infer<typeof procedureStepSchema>;
+export type ProcedureSourceChunk = z.infer<typeof procedureSourceChunkSchema>;
+export type ProcedureRetrieval = z.infer<typeof procedureRetrievalSchema>;
+export type ProcedureSelection = z.infer<typeof procedureSelectionSchema>;
+export type OptOutDraft = z.infer<typeof optOutDraftSchema>;
+export type SubmissionEmail = z.infer<typeof submissionEmailSchema>;
+export type SubmissionFormField = z.infer<typeof submissionFormFieldSchema>;
+export type SubmissionWebform = z.infer<typeof submissionWebformSchema>;
+export type SubmissionPayload = z.infer<typeof submissionPayloadSchema>;
+export type ActionPayload = z.infer<typeof actionPayloadSchema>;
+export type ActionHandoff = z.infer<typeof actionHandoffSchema>;
+export type ExecutionConfirmation = z.infer<typeof executionConfirmationSchema>;
+export type ExecutionResult = z.infer<typeof executionResultSchema>;
+export type WorkflowEvent = z.infer<typeof workflowEventSchema>;
+export type ExecutionOutcome = z.infer<typeof executionOutcomeSchema>;
+export type AgentPolicy = z.infer<typeof agentPolicySchema>;
+export type AgentRunState = z.infer<typeof agentRunStateSchema>;
+

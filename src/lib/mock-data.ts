@@ -1,3 +1,6 @@
+import type { AgentRunState } from "@/lib/agent";
+import { mockAgentRunState } from "@/lib/agent/mock-run";
+
 export type ScanStatus = "scanning" | "found" | "not_found" | "opted_out" | "failed";
 export type HistoryStatus = "pending" | "confirmed" | "re_listed";
 
@@ -27,129 +30,124 @@ export interface ChatMessage {
   timestamp: string;
 }
 
-export const mockBrokerSites: BrokerSite[] = [
-  {
-    id: "1",
-    name: "Spokeo",
-    url: "spokeo.com",
-    status: "found",
-    foundData: {
-      fields: ["Full Name", "Home Address", "Phone Number", "Email", "Relatives", "Age"],
-      optOutMessage: "To whom it may concern,\n\nI am writing to request the immediate removal of my personal information from your database pursuant to applicable privacy laws.\n\nName: John Doe\nProxy Email: shield-a7x29k@detraceme.io\n\nPlease confirm removal within 72 hours.\n\nRegards,\nDetraceMe Agent",
-    },
-  },
-  {
-    id: "2",
-    name: "WhitePages",
-    url: "whitepages.com",
-    status: "found",
-    foundData: {
-      fields: ["Full Name", "Current Address", "Previous Addresses", "Phone Number", "Associates"],
-      optOutMessage: "Dear WhitePages Team,\n\nI hereby request the deletion of all personal records associated with my identity from your platform.\n\nName: John Doe\nProxy Email: shield-a7x29k@detraceme.io\n\nPlease confirm within 72 hours.\n\nRegards,\nDetraceMe Agent",
-    },
-  },
-  {
-    id: "3",
-    name: "BeenVerified",
-    url: "beenverified.com",
-    status: "opted_out",
-  },
-  {
-    id: "4",
-    name: "Intelius",
-    url: "intelius.com",
-    status: "scanning",
-  },
-  {
-    id: "5",
-    name: "PeopleFinder",
-    url: "peoplefinder.com",
-    status: "not_found",
-  },
-  {
-    id: "6",
-    name: "TruePeopleSearch",
-    url: "truepeoplesearch.com",
-    status: "found",
-    foundData: {
-      fields: ["Full Name", "Address", "Phone", "Age", "Previous Cities"],
-      optOutMessage: "Dear TruePeopleSearch,\n\nPlease remove all records associated with my personal data from your website.\n\nName: John Doe\nProxy Email: shield-a7x29k@detraceme.io\n\nThank you.",
-    },
-  },
-  {
-    id: "7",
-    name: "FastPeopleSearch",
-    url: "fastpeoplesearch.com",
-    status: "opted_out",
-  },
-  {
-    id: "8",
-    name: "ThatsThem",
-    url: "thatsthem.com",
-    status: "not_found",
-  },
-  {
-    id: "9",
-    name: "Radaris",
-    url: "radaris.com",
-    status: "found",
-    foundData: {
-      fields: ["Full Name", "Address", "Phone", "Court Records", "Social Profiles"],
-      optOutMessage: "Dear Radaris,\n\nI request the removal of my personal information from your database.\n\nName: John Doe\nProxy Email: shield-a7x29k@detraceme.io\n\nPlease comply within 72 hours.",
-    },
-  },
-  {
-    id: "10",
-    name: "USSearch",
-    url: "ussearch.com",
-    status: "scanning",
-  },
-  {
-    id: "11",
-    name: "Pipl",
-    url: "pipl.com",
-    status: "failed",
-  },
-  {
-    id: "12",
-    name: "ZabaSearch",
-    url: "zabasearch.com",
-    status: "not_found",
-  },
-];
+export const BROKER_DIRECTORY = [
+  { id: "spokeo", name: "Spokeo", url: "spokeo.com" },
+  { id: "whitepages", name: "WhitePages", url: "whitepages.com" },
+  { id: "beenverified", name: "BeenVerified", url: "beenverified.com" },
+  { id: "intelius", name: "Intelius", url: "intelius.com" },
+  { id: "peoplefinder", name: "PeopleFinder", url: "peoplefinder.com" },
+  { id: "truepeoplesearch", name: "TruePeopleSearch", url: "truepeoplesearch.com" },
+  { id: "fastpeoplesearch", name: "FastPeopleSearch", url: "fastpeoplesearch.com" },
+  { id: "thatsthem", name: "ThatsThem", url: "thatsthem.com" },
+  { id: "radaris", name: "Radaris", url: "radaris.com" },
+  { id: "ussearch", name: "USSearch", url: "ussearch.com" },
+  { id: "pipl", name: "Pipl", url: "pipl.com" },
+  { id: "zabasearch", name: "ZabaSearch", url: "zabasearch.com" },
+] as const;
 
-export const mockHistory: HistoryEntry[] = [
-  { id: "h1", date: "2026-03-08", site: "BeenVerified", action: "Opt-out submitted", status: "confirmed" },
-  { id: "h2", date: "2026-03-08", site: "FastPeopleSearch", action: "Opt-out submitted", status: "confirmed" },
-  { id: "h3", date: "2026-03-07", site: "Spokeo", action: "Listing found", status: "pending" },
-  { id: "h4", date: "2026-03-07", site: "WhitePages", action: "Listing found", status: "pending" },
-  { id: "h5", date: "2026-03-06", site: "TruePeopleSearch", action: "Listing found", status: "pending" },
-  { id: "h6", date: "2026-03-06", site: "Radaris", action: "Listing found", status: "pending" },
-  { id: "h7", date: "2026-03-05", site: "Spokeo", action: "Previous removal re-listed", status: "re_listed" },
-  { id: "h8", date: "2026-03-04", site: "PeopleFinder", action: "Scan complete — not found", status: "confirmed" },
-  { id: "h9", date: "2026-03-03", site: "BeenVerified", action: "Opt-out submitted", status: "confirmed" },
-  { id: "h10", date: "2026-03-01", site: "Intelius", action: "Scan initiated", status: "pending" },
-];
+function getSiteStatus(run: AgentRunState, siteId: string): ScanStatus {
+  const outcome = run.outcomes.find((item) => item.siteId === siteId);
+  if (outcome && ["submitted", "confirmed", "needs_follow_up"].includes(outcome.status)) {
+    return "opted_out";
+  }
 
+  const failedEvent = run.timeline.find((event) => event.siteId === siteId && event.status === "failed");
+  if (failedEvent) {
+    return "failed";
+  }
+
+  const matchedSite = run.matchDecisions.find(
+    (decision) => decision.siteId === siteId && decision.decision !== "no_match",
+  );
+  if (matchedSite) {
+    return "found";
+  }
+
+  const activeScan = run.timeline.find(
+    (event) => event.siteId === siteId && event.phase === "scan" && event.status === "in_progress",
+  );
+  if (activeScan) {
+    return "scanning";
+  }
+
+  return "not_found";
+}
+
+function getFoundData(run: AgentRunState, siteId: string) {
+  const candidate = run.candidates.find((item) => item.siteId === siteId);
+  const draft = run.drafts.find((item) => item.siteId === siteId);
+
+  if (!candidate) return undefined;
+
+  return {
+    fields: candidate.extractedFields.map((field) => field.field),
+    optOutMessage: draft?.body,
+  };
+}
+
+export function buildBrokerSites(run: AgentRunState): BrokerSite[] {
+  return BROKER_DIRECTORY.map((site) => {
+    const status = getSiteStatus(run, site.id);
+    return {
+      ...site,
+      status,
+      foundData: status === "found" ? getFoundData(run, site.id) : undefined,
+    };
+  });
+}
+
+export function buildHistoryEntries(run: AgentRunState): HistoryEntry[] {
+  const eventEntries = run.timeline
+    .filter((event) => event.siteId)
+    .map((event) => {
+      const action = event.message;
+      let status: HistoryStatus = "pending";
+
+      if (action.includes("re-listed")) {
+        status = "re_listed";
+      } else if (
+        event.status === "completed" ||
+        action.includes("not found") ||
+        action.includes("Opt-out submitted")
+      ) {
+        status = "confirmed";
+      }
+
+      return {
+        id: event.eventId,
+        date: event.createdAt.slice(0, 10),
+        site: BROKER_DIRECTORY.find((site) => site.id === event.siteId)?.name ?? event.siteId ?? "Unknown",
+        action,
+        status,
+      };
+    });
+
+  return eventEntries.sort((a, b) => b.date.localeCompare(a.date));
+}
+
+export function buildChatMessagesFromTimeline(run: AgentRunState): ChatMessage[] {
+  return run.timeline
+    .filter((event) => event.eventId.startsWith("evt_chat_"))
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .map((event, index) => ({
+      id: `chat_timeline_${index}`,
+      role: "assistant" as const,
+      content: event.message,
+      timestamp: event.createdAt,
+    }));
+}
+
+export const mockBrokerSites: BrokerSite[] = buildBrokerSites(mockAgentRunState);
+export const mockHistory: HistoryEntry[] = buildHistoryEntries(mockAgentRunState);
 export const mockChatMessages: ChatMessage[] = [
-  {
-    id: "c1",
-    role: "assistant",
-    content: "Welcome back! Your scan found 4 new listings across data broker sites. Would you like me to submit removal requests for all of them?",
-    timestamp: "2026-03-08T10:00:00Z",
-  },
+  ...buildChatMessagesFromTimeline(mockAgentRunState).slice(0, 1),
   {
     id: "c2",
     role: "user",
     content: "Yes, submit removals for Spokeo and WhitePages first.",
-    timestamp: "2026-03-08T10:01:00Z",
+    timestamp: "2026-03-08T10:01:00.000Z",
   },
-  {
-    id: "c3",
-    role: "assistant",
-    content: "Got it. I've drafted opt-out requests for Spokeo and WhitePages using your proxy email. You can review them in the listing detail panel before I send them.",
-    timestamp: "2026-03-08T10:01:30Z",
-  },
+  ...buildChatMessagesFromTimeline(mockAgentRunState).slice(1),
 ];
 
 export const US_STATES = [

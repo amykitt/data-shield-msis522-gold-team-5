@@ -1,8 +1,12 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { HistoryStatusBadge } from "@/components/StatusBadge";
+import { useAgentDashboard } from "@/hooks/use-agent-dashboard";
 import { mockHistory } from "@/lib/mock-data";
 
 export default function HistoryPage() {
+  const dashboardQuery = useAgentDashboard();
+  const history = dashboardQuery.data?.history ?? mockHistory;
+
   return (
     <div className="flex h-full flex-col gap-4 p-4 md:p-6">
       <div>
@@ -21,7 +25,7 @@ export default function HistoryPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockHistory.map((entry) => (
+            {history.map((entry) => (
               <TableRow key={entry.id}>
                 <TableCell className="text-muted-foreground">{entry.date}</TableCell>
                 <TableCell className="font-medium">{entry.site}</TableCell>
