@@ -1,40 +1,28 @@
 import { useState } from "react";
-import { Input } from "@/components/ui/input";
+import { Bot, Loader2, Send, User } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Send, Bot, User } from "lucide-react";
-import { mockChatMessages, type ChatMessage } from "@/lib/mock-data";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import type { ChatMessage } from "@/lib/mock-data";
 
-const mockResponses = [
-  "I'll start processing that right away. You can track the progress in your scan dashboard.",
-  "All pending removal requests have been submitted using your proxy email address.",
-  "Re-scanning all sites now. This usually takes about 2-3 minutes.",
-  "I've found 2 new listings since your last scan. Would you like me to draft removal requests?",
-  "Your removal request for Spokeo was confirmed. The listing should be down within 48 hours.",
-];
+interface ChatBarProps {
+  messages: ChatMessage[];
+  onSend: (message: string) => Promise<void> | void;
+  isSending?: boolean;
+}
 
-export function ChatBar() {
-  const [messages, setMessages] = useState<ChatMessage[]>(mockChatMessages);
+export function ChatBar({ messages, onSend, isSending = false }: ChatBarProps) {
   const [input, setInput] = useState("");
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    const userMsg: ChatMessage = {
-      id: `u-${Date.now()}`,
-      role: "user",
-      content: input,
-      timestamp: new Date().toISOString(),
-    };
-    const aiMsg: ChatMessage = {
-      id: `a-${Date.now()}`,
-      role: "assistant",
-      content: mockResponses[Math.floor(Math.random() * mockResponses.length)],
-      timestamp: new Date().toISOString(),
-    };
-    setMessages((prev) => [...prev, userMsg, aiMsg]);
+  const handleSend = async () => {
+    const nextMessage = input.trim();
+    if (!nextMessage || isSending) return;
+
     setInput("");
+    await onSend(nextMessage);
   };
 
   return (
@@ -47,7 +35,7 @@ export function ChatBar() {
                 key={msg.id}
                 className={cn(
                   "flex gap-2 text-sm",
-                  msg.role === "user" ? "justify-end" : "justify-start"
+                  msg.role === "user" ? "justify-end" : "justify-start",
                 )}
               >
                 {msg.role === "assistant" && (
@@ -58,9 +46,7 @@ export function ChatBar() {
                 <div
                   className={cn(
                     "max-w-[80%] rounded-lg px-3 py-2",
-                    msg.role === "user"
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-foreground"
+                    msg.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted text-foreground",
                   )}
                 >
                   {msg.content}
@@ -88,12 +74,13 @@ export function ChatBar() {
           placeholder="Type a command... (e.g. 'submit all pending removals')"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
+          onKeyDown={(e) => e.key === "Enter" && void handleSend()}
           onFocus={() => setIsExpanded(true)}
           className="text-sm"
+          disabled={isSending}
         />
-        <Button size="icon" onClick={handleSend} disabled={!input.trim()}>
-          <Send className="h-4 w-4" />
+        <Button size="icon" onClick={() => void handleSend()} disabled={!input.trim() || isSending}>
+          {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </div>
     </div>

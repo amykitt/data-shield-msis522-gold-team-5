@@ -1,8 +1,13 @@
-import { mockBrokerSites, getScanSummary } from "@/lib/mock-data";
 import { Search, Eye, ShieldCheck, Loader2 } from "lucide-react";
 
-export function SummaryBar() {
-  const summary = getScanSummary(mockBrokerSites);
+import { getScanSummary, type BrokerSite } from "@/lib/mock-data";
+
+interface SummaryBarProps {
+  sites: BrokerSite[];
+}
+
+export function SummaryBar({ sites }: SummaryBarProps) {
+  const summary = getScanSummary(sites);
 
   return (
     <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-4 text-sm" role="status" aria-label="Scan summary">
