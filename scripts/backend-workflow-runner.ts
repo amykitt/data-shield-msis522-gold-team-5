@@ -20,6 +20,7 @@ import {
   type WorkflowRunOutput,
   type WorkflowSiteRunOutput,
 } from "@/lib/agent/workflow";
+import { captureLiveDiscoveryArtifact, type DiscoveryMode } from "@/lib/automation/discovery";
 import { createWorkflowAutomationHandoff } from "@/lib/automation/handoff";
 
 type WorkerMode = "plan" | "execute";
@@ -102,6 +103,14 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function readDiscoveryMode(): DiscoveryMode {
+  const value = process.env.WORKFLOW_DISCOVERY_MODE?.trim().toLowerCase();
+  if (value === "live" || value === "fixture" || value === "hybrid") {
+    return value;
+  }
+  return "hybrid";
+}
+
 function buildListingUrl(siteName: string, seedProfile: SeedProfile) {
   const slug = seedProfile.full_name.toLowerCase().replace(/\s+/g, "-");
   const citySlug = seedProfile.location.city.toLowerCase().replace(/\s+/g, "-");
@@ -160,24 +169,36 @@ function createMatchArtifact(siteName: string, seedProfile: SeedProfile) {
   };
 }
 
-function createSiteRegistry(input: WorkflowWorkerInput): WorkflowBatchSiteRegistryInput[] {
+async function createSiteRegistry(input: WorkflowWorkerInput): Promise<WorkflowBatchSiteRegistryInput[]> {
   const requestedSites = input.requestedSites.length > 0 ? input.requestedSites : ["spokeo", "fastpeoplesearch", "radaris"];
-  return requestedSites.map((siteId) => {
+  const discoveryMode = readDiscoveryMode();
+  return await Promise.all(requestedSites.map(async (siteId) => {
     const siteName = toDisplaySiteName(siteId);
     const normalized = normalizeSiteId(siteId);
-    const pageArtifact = ["spokeo", "fastpeoplesearch", "radaris"].includes(normalized)
+    const fixtureArtifact = ["spokeo", "fastpeoplesearch", "radaris"].includes(normalized)
       ? createMatchArtifact(siteName, input.seedProfile)
       : createNoMatchArtifact(siteName, input.seedProfile);
+    const liveArtifact = discoveryMode === "fixture"
+      ? null
+      : await captureLiveDiscoveryArtifact({
+          site: siteName,
+          seedProfile: input.seedProfile,
+        });
+    const pageArtifact = liveArtifact ?? fixtureArtifact;
     return {
       site: siteName,
       enabled: true,
-      notes: `Backend-generated site artifact for ${siteName}.`,
+      notes: liveArtifact
+        ? `Playwright-captured discovery artifact for ${siteName}.`
+        : discoveryMode === "live"
+          ? `Live discovery fallback artifact for ${siteName}.`
+          : `Backend-generated fallback artifact for ${siteName}.`,
       default_procedure_chunks: [],
       page_artifact: pageArtifact,
       retrieved_chunks: [],
       retry_count: 0,
     };
-  });
+  }));
 }
 
 function toTarget(siteRun: WorkflowSiteRunOutput): SearchTarget {
@@ -666,7 +687,7 @@ async function main() {
   }
 
   const input = JSON.parse(raw) as WorkflowWorkerInput;
-  const siteRegistry = createSiteRegistry(input);
+  const siteRegistry = await createSiteRegistry(input);
   const workflow = createAgentWorkflow({
     llm: {
       adapter: createRuntimeFixtureLlmAdapter(),
