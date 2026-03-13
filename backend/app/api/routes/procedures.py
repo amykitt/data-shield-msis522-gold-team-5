@@ -21,7 +21,7 @@ from app.services.procedure_service import (
 router = APIRouter()
 
 
-@router.post("/retrieve", response_model=ProcedureRetrievalResponse)
+@router.post("/retrieve", response_model=ProcedureRetrievalResponse, response_model_exclude_none=True)
 def retrieve_procedure_payload(
     payload: ProcedureRetrievalRequest,
     db: Session = Depends(get_db),
@@ -47,7 +47,7 @@ def retrieve_procedure_payload(
     return retrieve_relevant_procedures(db, payload)
 
 
-@router.post("/ingest", response_model=ProcedureIngestResponse)
+@router.post("/ingest", response_model=ProcedureIngestResponse, response_model_exclude_none=True)
 def ingest_procedure_payload(
     payload: ProcedureIngestRequest,
     db: Session = Depends(get_db),
@@ -55,7 +55,7 @@ def ingest_procedure_payload(
     return ingest_procedure_document(db, payload)
 
 
-@router.post("/search", response_model=ProcedureSearchResponse)
+@router.post("/search", response_model=ProcedureSearchResponse, response_model_exclude_none=True)
 def search_procedures(
     payload: ProcedureSearchRequest,
     db: Session = Depends(get_db),

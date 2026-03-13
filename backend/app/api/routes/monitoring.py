@@ -19,12 +19,12 @@ from app.services.run_service import (
 router = APIRouter()
 
 
-@router.get("/target-sets", response_model=ListMonitoredTargetSetsResponse)
+@router.get("/target-sets", response_model=ListMonitoredTargetSetsResponse, response_model_exclude_none=True)
 def get_target_sets(db: Session = Depends(get_db)) -> ListMonitoredTargetSetsResponse:
     return list_monitored_target_sets(db)
 
 
-@router.get("/target-sets/{target_set_id}", response_model=GetMonitoredTargetSetResponse)
+@router.get("/target-sets/{target_set_id}", response_model=GetMonitoredTargetSetResponse, response_model_exclude_none=True)
 def get_target_set(target_set_id: str, db: Session = Depends(get_db)) -> GetMonitoredTargetSetResponse:
     response = get_monitored_target_set(db, target_set_id)
     if response is None:
@@ -32,7 +32,7 @@ def get_target_set(target_set_id: str, db: Session = Depends(get_db)) -> GetMoni
     return response
 
 
-@router.post("/runs/{run_id}/target-set", response_model=CreateMonitoredTargetSetFromRunResponse)
+@router.post("/runs/{run_id}/target-set", response_model=CreateMonitoredTargetSetFromRunResponse, response_model_exclude_none=True)
 def materialize_target_set_from_run(
     run_id: str,
     payload: CreateMonitoredTargetSetFromRunRequest,

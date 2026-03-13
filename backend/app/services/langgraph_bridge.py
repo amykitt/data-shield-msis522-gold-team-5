@@ -122,10 +122,15 @@ def run_langgraph_workflow(
             capture_output=True,
             cwd=settings.workflow_worker_cwd,
             check=False,
+            timeout=settings.workflow_worker_timeout_seconds,
         )
     except FileNotFoundError as exc:
         raise LangGraphWorkerUnavailableError(
             f"Unable to start the LangGraph worker command: {' '.join(settings.workflow_worker_command_parts)}"
+        ) from exc
+    except subprocess.TimeoutExpired as exc:
+        raise LangGraphBridgeError(
+            f"LangGraph worker timed out after {settings.workflow_worker_timeout_seconds} seconds."
         ) from exc
 
     if completed.returncode != 0:

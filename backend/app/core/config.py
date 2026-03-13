@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     workflow_worker_enabled: bool = True
     workflow_worker_command: str = "./node_modules/.bin/vite-node scripts/backend-workflow-runner.ts"
     workflow_worker_cwd: Path = REPO_ROOT
+    workflow_worker_timeout_seconds: int = 45
 
     @field_validator("cors_origins", mode="before")
     @classmethod

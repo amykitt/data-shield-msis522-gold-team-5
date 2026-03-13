@@ -1,9 +1,22 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
+
+def _serialize_datetime(value: datetime) -> str:
+    normalized = value.astimezone(timezone.utc) if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return normalized.isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+class ApiModel(BaseModel):
+    model_config = ConfigDict(
+        json_encoders={
+            datetime: _serialize_datetime,
+        },
+    )
 
 
 AgentRunPhase = Literal[
@@ -37,17 +50,17 @@ ReviewReason = Literal[
 ApprovalAction = Literal["approve", "reject", "request_changes"]
 
 
-class SeedProfileLocation(BaseModel):
+class SeedProfileLocation(ApiModel):
     city: str
     state: str
 
 
-class SeedProfileOptional(BaseModel):
+class SeedProfileOptional(ApiModel):
     phone_last4: str | None = None
     prior_cities: list[str] = Field(default_factory=list)
 
 
-class SeedProfile(BaseModel):
+class SeedProfile(ApiModel):
     full_name: str
     name_variants: list[str] = Field(default_factory=list)
     location: SeedProfileLocation
@@ -57,7 +70,7 @@ class SeedProfile(BaseModel):
     consent: Literal[True]
 
 
-class SearchProfile(BaseModel):
+class SearchProfile(ApiModel):
     profileId: str
     firstName: str
     lastName: str
@@ -68,7 +81,7 @@ class SearchProfile(BaseModel):
     proxyEmail: EmailStr | None = None
 
 
-class UserIntent(BaseModel):
+class UserIntent(ApiModel):
     requestText: str
     requestedActions: list[str]
     requestedSites: list[str] = Field(default_factory=list)
@@ -76,7 +89,7 @@ class UserIntent(BaseModel):
     requiresUserApprovalBeforeSubmission: bool = True
 
 
-class WorkflowEventRead(BaseModel):
+class WorkflowEventRead(ApiModel):
     eventId: str
     runId: str
     phase: AgentRunPhase
@@ -88,7 +101,7 @@ class WorkflowEventRead(BaseModel):
     reviewReasons: list[str] = Field(default_factory=list)
 
 
-class AgentRunStateRead(BaseModel):
+class AgentRunStateRead(ApiModel):
     runId: str
     profile: SearchProfile
     intent: UserIntent
@@ -108,69 +121,69 @@ class AgentRunStateRead(BaseModel):
     updatedAt: datetime
 
 
-class StartAgentRunRequest(BaseModel):
+class StartAgentRunRequest(ApiModel):
     seed_profile: SeedProfile
     request_text: str
     requested_sites: list[str] = Field(default_factory=list)
 
 
-class StartAgentRunResponse(BaseModel):
+class StartAgentRunResponse(ApiModel):
     run: AgentRunStateRead
     events: list[WorkflowEventRead] = Field(default_factory=list)
 
 
-class GetRunResponse(BaseModel):
+class GetRunResponse(ApiModel):
     run: AgentRunStateRead
 
 
-class ListRunsResponse(BaseModel):
+class ListRunsResponse(ApiModel):
     runs: list[AgentRunStateRead]
 
 
-class SendChatCommandRequest(BaseModel):
+class SendChatCommandRequest(ApiModel):
     message: str
 
 
-class ChatMessageRead(BaseModel):
+class ChatMessageRead(ApiModel):
     id: str
     role: Literal["user", "assistant", "system"]
     content: str
     createdAt: datetime
 
 
-class SendChatCommandResponse(BaseModel):
+class SendChatCommandResponse(ApiModel):
     message: ChatMessageRead
     run: AgentRunStateRead
     events: list[WorkflowEventRead] = Field(default_factory=list)
 
 
-class ListChatMessagesResponse(BaseModel):
+class ListChatMessagesResponse(ApiModel):
     messages: list[ChatMessageRead] = Field(default_factory=list)
 
 
-class SubmitApprovalRequest(BaseModel):
+class SubmitApprovalRequest(ApiModel):
     action: ApprovalAction
     siteIds: list[str] = Field(default_factory=list)
     note: str | None = None
 
 
-class SubmitApprovalResponse(BaseModel):
+class SubmitApprovalResponse(ApiModel):
     run: AgentRunStateRead
     events: list[WorkflowEventRead] = Field(default_factory=list)
     handoffs: list[dict[str, Any]] = Field(default_factory=list)
 
 
-class TriggerRescanRequest(BaseModel):
+class TriggerRescanRequest(ApiModel):
     siteIds: list[str] = Field(default_factory=list)
     reason: str | None = None
 
 
-class TriggerRescanResponse(BaseModel):
+class TriggerRescanResponse(ApiModel):
     run: AgentRunStateRead
     events: list[WorkflowEventRead] = Field(default_factory=list)
 
 
-class AppendExecutionResultRequest(BaseModel):
+class AppendExecutionResultRequest(ApiModel):
     site: str
     candidate_url: str
     status: Literal["submitted", "pending", "failed", "manual_required"]
@@ -182,29 +195,29 @@ class AppendExecutionResultRequest(BaseModel):
     handoffId: str | None = None
 
 
-class AppendExecutionResultResponse(BaseModel):
+class AppendExecutionResultResponse(ApiModel):
     run: AgentRunStateRead
     events: list[WorkflowEventRead] = Field(default_factory=list)
 
 
-class PlanSubmissionRequest(BaseModel):
+class PlanSubmissionRequest(ApiModel):
     site: str
     candidate_url: str
     payload: dict[str, Any]
 
 
-class PlanSubmissionResponse(BaseModel):
+class PlanSubmissionResponse(ApiModel):
     accepted: bool
     handoffs: list[dict[str, Any]] = Field(default_factory=list)
 
 
-class MonitoringPolicyRead(BaseModel):
+class MonitoringPolicyRead(ApiModel):
     cadenceDays: int
     reReviewCooldownDays: int
     reReviewListingReappearanceThreshold: int
 
 
-class MonitoredTargetRead(BaseModel):
+class MonitoredTargetRead(ApiModel):
     siteId: str
     candidateId: str
     candidateUrl: str
@@ -213,7 +226,7 @@ class MonitoredTargetRead(BaseModel):
     triggerNewRemovalCycle: bool = False
 
 
-class MonitoredTargetSetRead(BaseModel):
+class MonitoredTargetSetRead(ApiModel):
     targetSetId: str
     sourceRunId: str
     profileId: str
@@ -230,23 +243,23 @@ class MonitoredTargetSetRead(BaseModel):
     storageBacked: bool = False
 
 
-class CreateMonitoredTargetSetFromRunRequest(BaseModel):
+class CreateMonitoredTargetSetFromRunRequest(ApiModel):
     profileId: str
 
 
-class CreateMonitoredTargetSetFromRunResponse(BaseModel):
+class CreateMonitoredTargetSetFromRunResponse(ApiModel):
     targetSet: MonitoredTargetSetRead
 
 
-class ListMonitoredTargetSetsResponse(BaseModel):
+class ListMonitoredTargetSetsResponse(ApiModel):
     targetSets: list[MonitoredTargetSetRead] = Field(default_factory=list)
 
 
-class GetMonitoredTargetSetResponse(BaseModel):
+class GetMonitoredTargetSetResponse(ApiModel):
     targetSet: MonitoredTargetSetRead
 
 
-class ProcedureChunkRead(BaseModel):
+class ProcedureChunkRead(ApiModel):
     doc_id: str
     quote: str
     relevance_score: float | None = None
@@ -254,7 +267,7 @@ class ProcedureChunkRead(BaseModel):
     embedding_score: float | None = None
 
 
-class ProcedureRecordRead(BaseModel):
+class ProcedureRecordRead(ApiModel):
     procedure_id: str
     site: str
     updated_at: datetime
@@ -267,7 +280,7 @@ class ProcedureRecordRead(BaseModel):
     summary: str | None = None
 
 
-class ProcedureRetrievalRequest(BaseModel):
+class ProcedureRetrievalRequest(ApiModel):
     seed_profile: dict[str, Any]
     discovery_result: dict[str, Any]
     site: str
@@ -275,13 +288,13 @@ class ProcedureRetrievalRequest(BaseModel):
     registry_chunks: list[ProcedureChunkRead] = Field(default_factory=list)
 
 
-class ProcedureRetrievalResponse(BaseModel):
+class ProcedureRetrievalResponse(ApiModel):
     site: str
     retrieved_at: datetime
     procedures: list[ProcedureRecordRead] = Field(default_factory=list)
 
 
-class ProcedureIngestRequest(BaseModel):
+class ProcedureIngestRequest(ApiModel):
     procedure_id: str | None = None
     site: str
     channel_hint: Literal["email", "webform", "unknown"] = "unknown"
@@ -295,7 +308,7 @@ class ProcedureIngestRequest(BaseModel):
     regenerate_embeddings: bool = True
 
 
-class ProcedureIngestResponse(BaseModel):
+class ProcedureIngestResponse(ApiModel):
     procedure_id: str
     site: str
     chunk_count: int
@@ -305,20 +318,20 @@ class ProcedureIngestResponse(BaseModel):
     embedding_model: str
 
 
-class ProcedureSearchRequest(BaseModel):
+class ProcedureSearchRequest(ApiModel):
     site: str
     query: str
     limit: int = 5
 
 
-class ProcedureSearchResponse(BaseModel):
+class ProcedureSearchResponse(ApiModel):
     site: str
     query: str
     retrieved_at: datetime
     procedures: list[ProcedureRecordRead] = Field(default_factory=list)
 
 
-class RemovalStatusEventRead(BaseModel):
+class RemovalStatusEventRead(ApiModel):
     id: str
     status: str
     message: str
@@ -329,7 +342,7 @@ class RemovalStatusEventRead(BaseModel):
     created_at: datetime
 
 
-class RemovalRequestRead(BaseModel):
+class RemovalRequestRead(ApiModel):
     id: str
     run_id: str
     site_id: str
@@ -348,11 +361,11 @@ class RemovalRequestRead(BaseModel):
     events: list[RemovalStatusEventRead] = Field(default_factory=list)
 
 
-class ListRemovalRequestsResponse(BaseModel):
+class ListRemovalRequestsResponse(ApiModel):
     removals: list[RemovalRequestRead] = Field(default_factory=list)
 
 
-class ApiError(BaseModel):
+class ApiError(ApiModel):
     code: str
     message: str
     details: Any | None = None

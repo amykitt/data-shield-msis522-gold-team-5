@@ -40,12 +40,12 @@ from app.services.run_service import (
 router = APIRouter()
 
 
-@router.get("/runs", response_model=ListRunsResponse)
+@router.get("/runs", response_model=ListRunsResponse, response_model_exclude_none=True)
 def get_runs(db: Session = Depends(get_db)) -> ListRunsResponse:
     return ListRunsResponse(runs=list_runs(db))
 
 
-@router.post("/runs/start", response_model=StartAgentRunResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/runs/start", response_model=StartAgentRunResponse, status_code=status.HTTP_201_CREATED, response_model_exclude_none=True)
 def start_run(payload: StartAgentRunRequest, db: Session = Depends(get_db)) -> StartAgentRunResponse:
     run, events = create_run(db, payload)
     events.extend(process_run_workflow(db, run))
@@ -53,7 +53,7 @@ def start_run(payload: StartAgentRunRequest, db: Session = Depends(get_db)) -> S
     return StartAgentRunResponse(run=state, events=[event for event in state.timeline if event.eventId in {item.id for item in events}])
 
 
-@router.get("/runs/{run_id}", response_model=GetRunResponse)
+@router.get("/runs/{run_id}", response_model=GetRunResponse, response_model_exclude_none=True)
 def get_run_by_id(run_id: str, db: Session = Depends(get_db)) -> GetRunResponse:
     run = get_run(db, run_id)
     if not run:
@@ -61,7 +61,7 @@ def get_run_by_id(run_id: str, db: Session = Depends(get_db)) -> GetRunResponse:
     return GetRunResponse(run=build_run_state(run))
 
 
-@router.get("/runs/{run_id}/messages", response_model=ListChatMessagesResponse)
+@router.get("/runs/{run_id}/messages", response_model=ListChatMessagesResponse, response_model_exclude_none=True)
 def get_run_messages(run_id: str, db: Session = Depends(get_db)) -> ListChatMessagesResponse:
     run = get_run(db, run_id)
     if not run:
@@ -69,7 +69,7 @@ def get_run_messages(run_id: str, db: Session = Depends(get_db)) -> ListChatMess
     return list_chat_messages(run)
 
 
-@router.get("/runs/{run_id}/removals", response_model=ListRemovalRequestsResponse)
+@router.get("/runs/{run_id}/removals", response_model=ListRemovalRequestsResponse, response_model_exclude_none=True)
 def get_run_removals(run_id: str, db: Session = Depends(get_db)) -> ListRemovalRequestsResponse:
     run = get_run(db, run_id)
     if not run:
@@ -77,7 +77,7 @@ def get_run_removals(run_id: str, db: Session = Depends(get_db)) -> ListRemovalR
     return list_removal_requests(db, run_id)
 
 
-@router.post("/runs/{run_id}/chat", response_model=SendChatCommandResponse)
+@router.post("/runs/{run_id}/chat", response_model=SendChatCommandResponse, response_model_exclude_none=True)
 def send_chat_command(
     run_id: str,
     payload: SendChatCommandRequest,
@@ -97,7 +97,7 @@ def send_chat_command(
     )
 
 
-@router.post("/runs/{run_id}/approval", response_model=SubmitApprovalResponse)
+@router.post("/runs/{run_id}/approval", response_model=SubmitApprovalResponse, response_model_exclude_none=True)
 def approve_run(
     run_id: str,
     payload: SubmitApprovalRequest,
@@ -113,7 +113,7 @@ def approve_run(
     return SubmitApprovalResponse(run=state, events=state.timeline[-1:], handoffs=state.handoffs)
 
 
-@router.post("/runs/{run_id}/rescan", response_model=TriggerRescanResponse)
+@router.post("/runs/{run_id}/rescan", response_model=TriggerRescanResponse, response_model_exclude_none=True)
 def rescan_run(
     run_id: str,
     payload: TriggerRescanRequest,
@@ -130,7 +130,7 @@ def rescan_run(
     return TriggerRescanResponse(run=state, events=[event for event in state.timeline if event.eventId in {item.id for item in events}])
 
 
-@router.post("/runs/{run_id}/execution-results", response_model=AppendExecutionResultResponse)
+@router.post("/runs/{run_id}/execution-results", response_model=AppendExecutionResultResponse, response_model_exclude_none=True)
 def add_execution_result(
     run_id: str,
     payload: AppendExecutionResultRequest,
@@ -146,7 +146,7 @@ def add_execution_result(
     return AppendExecutionResultResponse(run=state, events=state.timeline[-1:])
 
 
-@router.post("/runs/{run_id}/plan-submission", response_model=PlanSubmissionResponse)
+@router.post("/runs/{run_id}/plan-submission", response_model=PlanSubmissionResponse, response_model_exclude_none=True)
 def create_submission_plan(
     run_id: str,
     payload: PlanSubmissionRequest,
