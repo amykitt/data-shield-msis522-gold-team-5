@@ -46,14 +46,24 @@ describe("artifact-backed one-site golden path", () => {
     expect(result.draft_optout).toEqual({
       site: "FastPeopleSearch",
       candidate_url: fastPeopleSearchFixture.candidateUrl,
+      submission_channel: "webform",
       procedure_type: "webform",
+      required_fields: [
+        { name: "full_name", value: fastPeopleSearchFixture.seedProfile.full_name, required: true },
+        { name: "privacy_email", value: fastPeopleSearchFixture.seedProfile.privacy_email, required: true },
+      ],
+      optional_fields: [],
+      manual_review_required: false,
+      review_reasons: [],
       webform: {
         fields: [
           { name: "full_name", value: fastPeopleSearchFixture.seedProfile.full_name },
           { name: "privacy_email", value: fastPeopleSearchFixture.seedProfile.privacy_email },
         ],
         consent_checkboxes: expect.arrayContaining([
-          expect.stringContaining("consent checkbox"),
+          expect.objectContaining({
+            instruction: expect.stringContaining("consent checkbox"),
+          }),
         ]),
       },
     });
@@ -61,7 +71,11 @@ describe("artifact-backed one-site golden path", () => {
     expect(result.interpret_result?.next_status).toBe(fastPeopleSearchFixture.expected.nextStatus);
     expect(result.interpret_result?.next_action).toBe(fastPeopleSearchFixture.expected.nextAction);
     expect(result.plan_submission).toEqual({
-      action_plan: result.draft_optout,
+      action_plan: {
+        ...result.draft_optout,
+        manual_review_required: false,
+        review_reasons: [],
+      },
       requires_manual_review: false,
       review_reasons: [],
     });

@@ -340,18 +340,38 @@ function buildAdditionalDraftFacts(seedProfile: SeedProfile) {
   ].filter(Boolean);
 }
 
+function toSubmissionFields(seedProfile: SeedProfile, fields: string[]) {
+  return fields
+    .map((field) => ({
+      name: field,
+      value: makeFieldValue(seedProfile, field),
+      required: true as const,
+    }))
+    .filter((field) => field.value);
+}
+
+function toConsentCheckboxInstructions(steps: string[]) {
+  return steps
+    .filter((step) => /checkbox|consent|agree/i.test(step))
+    .map((step, index) => ({
+      label: `consent_checkbox_${index + 1}`,
+      instruction: step,
+      required: true,
+    }));
+}
+
 function hasActionableProcedure(procedureType: "email" | "webform" | "procedure_unknown", requiredFields: string[]) {
   return procedureType !== "procedure_unknown" && requiredFields.length > 0;
 }
 
 function hasClearExecutionEvidence(executionResult: ExecutionResult) {
   const confirmationSignals = [
-    executionResult.confirmation.ticket,
-    executionResult.confirmation.screenshot_ref,
-    executionResult.confirmation.page_text,
+    executionResult.ticket_ids[0],
+    executionResult.screenshot_ref,
+    executionResult.confirmation_text,
   ].filter(Boolean);
   const combinedText = toLower(
-    [executionResult.confirmation.page_text, executionResult.error].filter(Boolean).join(" "),
+    [executionResult.confirmation_text, executionResult.error_text].filter(Boolean).join(" "),
   );
 
   return confirmationSignals.length > 0
@@ -360,9 +380,10 @@ function hasClearExecutionEvidence(executionResult: ExecutionResult) {
 
 function hasCaptchaOrManualSignal(executionResult: ExecutionResult) {
   const combinedText = toLower(
-    [executionResult.confirmation.page_text, executionResult.error].filter(Boolean).join(" "),
+    [executionResult.confirmation_text, executionResult.error_text].filter(Boolean).join(" "),
   );
-  return /captcha|manual review|required|human verification/.test(combinedText);
+  return executionResult.manual_review_required
+    || /captcha|manual review|required|human verification/.test(combinedText);
 }
 
 function shouldBlockOnProcedureResolution(status: ProcedureResolutionStatus, context: GraphContext) {
@@ -445,11 +466,17 @@ function createDefaultNodes(): AgentWorkflowNodes {
         const destination = inferDestinationEmail(procedure.source_chunks);
         const facts = buildDraftFacts(seed_profile, procedure.required_fields);
         const additionalFacts = context.policy.minimize_pii ? [] : buildAdditionalDraftFacts(seed_profile);
+        const requiredFields = toSubmissionFields(seed_profile, procedure.required_fields);
 
         return {
           site,
           candidate_url,
+          submission_channel: "email",
           procedure_type: "email",
+          required_fields: requiredFields,
+          optional_fields: [],
+          manual_review_required: false,
+          review_reasons: [],
           email: {
             to: destination,
             subject: `${site} removal request for ${seed_profile.full_name}`,
@@ -462,16 +489,23 @@ function createDefaultNodes(): AgentWorkflowNodes {
         };
       }
 
+      const requiredFields = toSubmissionFields(seed_profile, procedure.required_fields);
+      const consentCheckboxes = toConsentCheckboxInstructions(procedure.steps);
       return {
         site,
         candidate_url,
+        submission_channel: "webform",
         procedure_type: "webform",
+        required_fields: requiredFields,
+        optional_fields: [],
+        manual_review_required: false,
+        review_reasons: [],
         webform: {
-          fields: procedure.required_fields.map((field) => ({
-            name: field,
-            value: makeFieldValue(seed_profile, field),
-          })).filter((field) => field.value),
-          consent_checkboxes: procedure.steps.filter((step) => /checkbox|consent|agree/i.test(step)),
+          fields: requiredFields.map((field) => ({
+            name: field.name,
+            value: field.value,
+          })),
+          consent_checkboxes: consentCheckboxes,
         },
       };
     },
@@ -491,7 +525,11 @@ function createDefaultNodes(): AgentWorkflowNodes {
       }
 
       return {
-        action_plan: input.submission_payload,
+        action_plan: {
+          ...input.submission_payload,
+          manual_review_required: reviewReasons.length > 0,
+          review_reasons: unique(reviewReasons),
+        },
         requires_manual_review: reviewReasons.length > 0,
         review_reasons: unique(reviewReasons),
       };

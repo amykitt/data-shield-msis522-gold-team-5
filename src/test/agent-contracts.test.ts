@@ -101,7 +101,11 @@ describe("agent contracts", () => {
       submissionPayloadSchema.safeParse({
         site: "FastPeopleSearch",
         candidate_url: "https://example.com/listing/jane-doe",
+        submission_channel: "email",
         procedure_type: "email",
+        required_fields: [
+          { name: "full_name", value: "Jane Doe", required: true },
+        ],
         email: {
           to: "privacy@example.com",
           subject: "Removal Request",
@@ -114,7 +118,11 @@ describe("agent contracts", () => {
       submissionPayloadSchema.safeParse({
         site: "FastPeopleSearch",
         candidate_url: "https://example.com/listing/jane-doe",
+        submission_channel: "webform",
         procedure_type: "webform",
+        required_fields: [
+          { name: "full_name", value: "Jane Doe", required: true },
+        ],
       }).success,
     ).toBe(false);
 
@@ -122,7 +130,11 @@ describe("agent contracts", () => {
       submissionPayloadSchema.safeParse({
         site: "FastPeopleSearch",
         candidate_url: "https://example.com/listing/jane-doe",
+        submission_channel: "webform",
         procedure_type: "webform",
+        required_fields: [
+          { name: "full_name", value: "Jane Doe", required: true },
+        ],
         email: {
           to: "privacy@example.com",
           subject: "Removal Request",
@@ -141,15 +153,34 @@ describe("agent contracts", () => {
       site: "FastPeopleSearch",
       candidate_url: "https://example.com/listing/jane-doe",
       status: "pending",
-      confirmation: {
-        ticket: null,
-        page_text: "Your request has been received.",
-        screenshot_ref: "s3://bucket/confirm.png",
-      },
-      error: null,
+      manual_review_required: false,
+      confirmation_text: "Your request has been received.",
+      ticket_ids: [],
+      screenshot_ref: "s3://bucket/confirm.png",
+      error_text: null,
     });
 
     expect(result.success).toBe(true);
+  });
+
+  it("requires manual review reasons on executable payloads when automation should not proceed blindly", () => {
+    const result = submissionPayloadSchema.safeParse({
+      site: "FastPeopleSearch",
+      candidate_url: "https://example.com/listing/jane-doe",
+      submission_channel: "webform",
+      procedure_type: "webform",
+      required_fields: [
+        { name: "full_name", value: "Jane Doe", required: true },
+      ],
+      manual_review_required: true,
+      review_reasons: [],
+      webform: {
+        fields: [{ name: "full_name", value: "Jane Doe" }],
+        consent_checkboxes: [],
+      },
+    });
+
+    expect(result.success).toBe(false);
   });
 
   it("accepts a representative agent run state", () => {

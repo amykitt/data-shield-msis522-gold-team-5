@@ -297,18 +297,48 @@ export const submissionFormFieldSchema = z.object({
   value: z.string().min(1),
 });
 
+export const submissionRequiredFieldSchema = z.object({
+  name: z.string().min(1),
+  value: z.string().min(1),
+  required: z.literal(true).default(true),
+});
+
+export const submissionOptionalFieldSchema = z.object({
+  name: z.string().min(1),
+  value: z.string().min(1),
+  required: z.literal(false).default(false),
+});
+
+export const consentCheckboxInstructionSchema = z.object({
+  label: z.string().min(1),
+  instruction: z.string().min(1),
+  required: z.boolean().default(true),
+});
+
 export const submissionWebformSchema = z.object({
   fields: z.array(submissionFormFieldSchema).default([]),
-  consent_checkboxes: z.array(z.string().min(1)).default([]),
+  consent_checkboxes: z.array(consentCheckboxInstructionSchema).default([]),
 });
 
 export const submissionPayloadSchema = z.object({
   site: z.string().min(1),
   candidate_url: z.string().url(),
+  submission_channel: z.enum(["email", "webform"]),
   procedure_type: z.enum(["email", "webform"]),
+  required_fields: z.array(submissionRequiredFieldSchema).min(1),
+  optional_fields: z.array(submissionOptionalFieldSchema).default([]),
+  manual_review_required: z.boolean().default(false),
+  review_reasons: z.array(reviewReasonSchema).default([]),
   email: submissionEmailSchema.optional(),
   webform: submissionWebformSchema.optional(),
 }).superRefine((value, ctx) => {
+  if (value.submission_channel !== value.procedure_type) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Submission channel must match the procedure type.",
+      path: ["submission_channel"],
+    });
+  }
   if (value.procedure_type === "email" && !value.email) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -336,6 +366,36 @@ export const submissionPayloadSchema = z.object({
       message: "Webform procedures cannot include an email payload.",
       path: ["email"],
     });
+  }
+  if (value.manual_review_required && value.review_reasons.length === 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Manual-review payloads must include review reasons.",
+      path: ["review_reasons"],
+    });
+  }
+  if (!value.manual_review_required && value.review_reasons.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Review reasons require manual_review_required=true.",
+      path: ["manual_review_required"],
+    });
+  }
+  if (value.procedure_type === "webform") {
+    const allowedFieldNames = new Set([
+      ...value.required_fields.map((field) => field.name),
+      ...value.optional_fields.map((field) => field.name),
+    ]);
+
+    for (const field of value.webform?.fields ?? []) {
+      if (!allowedFieldNames.has(field.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Webform field "${field.name}" is not declared in the submission field contract.`,
+          path: ["webform", "fields"],
+        });
+      }
+    }
   }
 });
 
@@ -367,18 +427,23 @@ export const actionHandoffSchema = z.object({
   }
 });
 
-export const executionConfirmationSchema = z.object({
-  ticket: z.string().nullable(),
-  page_text: z.string().nullable(),
-  screenshot_ref: z.string().nullable(),
-});
-
 export const executionResultSchema = z.object({
   site: z.string().min(1),
   candidate_url: z.string().url(),
   status: z.enum(["submitted", "pending", "failed", "manual_required"]),
-  confirmation: executionConfirmationSchema,
-  error: z.string().nullable(),
+  manual_review_required: z.boolean().default(false),
+  confirmation_text: z.string().nullable(),
+  ticket_ids: z.array(z.string().min(1)).default([]),
+  screenshot_ref: z.string().nullable(),
+  error_text: z.string().nullable(),
+}).superRefine((value, ctx) => {
+  if (value.status === "manual_required" && !value.manual_review_required) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "manual_required execution results must set manual_review_required=true.",
+      path: ["manual_review_required"],
+    });
+  }
 });
 
 export const workflowEventSchema = z.object({
@@ -493,11 +558,13 @@ export type ProcedureSelection = z.infer<typeof procedureSelectionSchema>;
 export type OptOutDraft = z.infer<typeof optOutDraftSchema>;
 export type SubmissionEmail = z.infer<typeof submissionEmailSchema>;
 export type SubmissionFormField = z.infer<typeof submissionFormFieldSchema>;
+export type SubmissionRequiredField = z.infer<typeof submissionRequiredFieldSchema>;
+export type SubmissionOptionalField = z.infer<typeof submissionOptionalFieldSchema>;
+export type ConsentCheckboxInstruction = z.infer<typeof consentCheckboxInstructionSchema>;
 export type SubmissionWebform = z.infer<typeof submissionWebformSchema>;
 export type SubmissionPayload = z.infer<typeof submissionPayloadSchema>;
 export type ActionPayload = z.infer<typeof actionPayloadSchema>;
 export type ActionHandoff = z.infer<typeof actionHandoffSchema>;
-export type ExecutionConfirmation = z.infer<typeof executionConfirmationSchema>;
 export type ExecutionResult = z.infer<typeof executionResultSchema>;
 export type WorkflowEvent = z.infer<typeof workflowEventSchema>;
 export type ExecutionOutcome = z.infer<typeof executionOutcomeSchema>;

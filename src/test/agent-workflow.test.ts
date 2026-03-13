@@ -42,12 +42,11 @@ describe("agent workflow skeleton", () => {
           site: "FastPeopleSearch",
           candidate_url: "https://example.com/listing/jane-doe",
           status: "pending",
-          confirmation: {
-            ticket: null,
-            page_text: "Your request has been received.",
-            screenshot_ref: null,
-          },
-          error: null,
+          manual_review_required: false,
+          confirmation_text: "Your request has been received.",
+          ticket_ids: [],
+          screenshot_ref: null,
+          error_text: null,
         },
       },
     });
@@ -61,9 +60,16 @@ describe("agent workflow skeleton", () => {
     expect(result.discovery_parse.candidates[0]?.match_confidence).toBeGreaterThanOrEqual(0.75);
     expect(result.retrieve_procedure?.procedure_type).toBe("webform");
     expect(result.retrieve_procedure?.source_chunks.length).toBeGreaterThan(0);
+    expect(result.draft_optout?.submission_channel).toBe("webform");
+    expect(result.draft_optout?.required_fields).toEqual([
+      { name: "full_name", value: seedProfile.full_name, required: true },
+      { name: "privacy_email", value: seedProfile.privacy_email, required: true },
+    ]);
     expect(result.draft_optout?.webform?.fields.some((field) => field.name === "privacy_email")).toBe(true);
+    expect(result.draft_optout?.webform?.consent_checkboxes[0]?.instruction).toContain("checkbox");
     expect(result.draft_optout?.email).toBeUndefined();
     expect(result.plan_submission?.requires_manual_review).toBe(false);
+    expect(result.plan_submission?.action_plan.manual_review_required).toBe(false);
     expect(result.interpret_result?.next_status).toBe("pending");
     expect(result.interpret_result?.next_action).toBe("await_confirmation");
   });
@@ -525,12 +531,11 @@ describe("agent workflow skeleton", () => {
           site: "FastPeopleSearch",
           candidate_url: "https://example.com/listing/jane-doe",
           status: "submitted",
-          confirmation: {
-            ticket: null,
-            page_text: null,
-            screenshot_ref: null,
-          },
-          error: null,
+          manual_review_required: false,
+          confirmation_text: null,
+          ticket_ids: [],
+          screenshot_ref: null,
+          error_text: null,
         },
       },
     });
@@ -561,12 +566,11 @@ describe("agent workflow skeleton", () => {
           site: "FastPeopleSearch",
           candidate_url: "https://example.com/listing/jane-doe",
           status: "failed",
-          confirmation: {
-            ticket: null,
-            page_text: "CAPTCHA required before submission can continue.",
-            screenshot_ref: null,
-          },
-          error: "CAPTCHA challenge encountered",
+          manual_review_required: true,
+          confirmation_text: "CAPTCHA required before submission can continue.",
+          ticket_ids: [],
+          screenshot_ref: null,
+          error_text: "CAPTCHA challenge encountered",
         },
       },
     });
@@ -595,12 +599,11 @@ describe("agent workflow skeleton", () => {
           site: "FastPeopleSearch",
           candidate_url: "https://example.com/listing/jane-doe",
           status: "failed",
-          confirmation: {
-            ticket: null,
-            page_text: "Submission failed.",
-            screenshot_ref: null,
-          },
-          error: "Timeout",
+          manual_review_required: false,
+          confirmation_text: "Submission failed.",
+          ticket_ids: [],
+          screenshot_ref: null,
+          error_text: "Timeout",
         },
       },
     });
@@ -622,12 +625,11 @@ describe("agent workflow skeleton", () => {
           site: "FastPeopleSearch",
           candidate_url: "https://example.com/listing/jane-doe",
           status: "pending",
-          confirmation: {
-            ticket: null,
-            page_text: "Your request has been received.",
-            screenshot_ref: null,
-          },
-          error: null,
+          manual_review_required: false,
+          confirmation_text: "Your request has been received.",
+          ticket_ids: [],
+          screenshot_ref: null,
+          error_text: null,
         },
       },
     });

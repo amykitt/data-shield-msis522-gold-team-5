@@ -44,12 +44,11 @@ export const fastPeopleSearchExecutionResult: ExecutionResult = {
   site: "FastPeopleSearch",
   candidate_url: fastPeopleSearchCandidateUrl,
   status: "pending",
-  confirmation: {
-    ticket: null,
-    page_text: readFileSync(fixtureArtifactPath("fastpeoplesearch", "confirmation-page.txt"), "utf8").trim(),
-    screenshot_ref: "fixtures/fastpeoplesearch-confirmation.png",
-  },
-  error: null,
+  manual_review_required: false,
+  confirmation_text: readFileSync(fixtureArtifactPath("fastpeoplesearch", "confirmation-page.txt"), "utf8").trim(),
+  ticket_ids: [],
+  screenshot_ref: "fixtures/fastpeoplesearch-confirmation.png",
+  error_text: null,
 };
 
 export const expectedFastPeopleSearchDiscovery: Partial<DiscoveryResult> = {
