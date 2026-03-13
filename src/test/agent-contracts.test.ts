@@ -92,6 +92,23 @@ describe("agent contracts", () => {
         procedure_type: "webform",
       }).success,
     ).toBe(false);
+
+    expect(
+      submissionPayloadSchema.safeParse({
+        site: "FastPeopleSearch",
+        candidate_url: "https://example.com/listing/jane-doe",
+        procedure_type: "webform",
+        email: {
+          to: "privacy@example.com",
+          subject: "Removal Request",
+          body: "Please remove my listing.",
+        },
+        webform: {
+          fields: [{ name: "full_name", value: "Jane Doe" }],
+          consent_checkboxes: [],
+        },
+      }).success,
+    ).toBe(false);
   });
 
   it("accepts the execution result shape from automation", () => {

@@ -1,0 +1,6 @@
+Jane Doe, Age 35
+Seattle, Washington
+Current Address: 123 Pine St Seattle WA
+Previous City: Tacoma WA
+Phone: 206-555-0114
+Relatives: John Doe, Mary Doe

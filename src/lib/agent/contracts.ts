@@ -316,6 +316,20 @@ export const submissionPayloadSchema = z.object({
       path: ["webform"],
     });
   }
+  if (value.procedure_type === "email" && value.webform) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Email procedures cannot include a webform payload.",
+      path: ["webform"],
+    });
+  }
+  if (value.procedure_type === "webform" && value.email) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Webform procedures cannot include an email payload.",
+      path: ["email"],
+    });
+  }
 });
 
 export const actionPayloadSchema = z.object({
