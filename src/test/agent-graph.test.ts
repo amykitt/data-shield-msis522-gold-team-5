@@ -119,13 +119,18 @@ describe("agent graph node contracts", () => {
     const submissionPayload = {
       site: "FastPeopleSearch",
       candidate_url: "https://example.com/listing/jane-doe",
+      submission_channel: "webform",
       procedure_type: "webform",
+      required_fields: [
+        { name: "full_name", value: "Jane Doe", required: true },
+        { name: "privacy_email", value: "shield-abc123@detraceme.io", required: true },
+      ],
       webform: {
         fields: [
           { name: "full_name", value: "Jane Doe" },
           { name: "privacy_email", value: "shield-abc123@detraceme.io" },
         ],
-        consent_checkboxes: ["I confirm this is my data"],
+        consent_checkboxes: [{ label: "confirm_identity", instruction: "I confirm this is my data", required: true }],
       },
     };
 
@@ -188,12 +193,11 @@ describe("agent graph node contracts", () => {
           site: "FastPeopleSearch",
           candidate_url: "https://example.com/listing/jane-doe",
           status: "manual_required",
-          confirmation: {
-            ticket: null,
-            page_text: "CAPTCHA required",
-            screenshot_ref: null,
-          },
-          error: null,
+          manual_review_required: true,
+          confirmation_text: "CAPTCHA required",
+          ticket_ids: [],
+          screenshot_ref: null,
+          error_text: null,
         },
         prior_review_reasons: ["captcha"],
         retry_count: 1,

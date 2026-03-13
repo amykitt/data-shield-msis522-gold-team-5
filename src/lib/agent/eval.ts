@@ -111,14 +111,21 @@ export function evaluateGoldenPath(output: WorkflowRunOutput, expected: GoldenPa
   const candidate = output.discovery_parse.candidates[0];
   const webformFields = output.draft_optout?.webform?.fields.map((field) => field.name) ?? [];
   const fieldEntries = output.draft_optout?.webform?.fields ?? [];
+  const requiredFields = output.draft_optout?.required_fields ?? [];
   const uniqueFieldNames = new Set(fieldEntries.map((field) => field.name));
   const cleanSubmissionPayload = output.draft_optout?.procedure_type === "webform"
-    ? output.draft_optout.email === undefined
+    ? output.draft_optout.submission_channel === "webform"
+      && output.draft_optout.email === undefined
       && fieldEntries.length > 0
+      && requiredFields.length > 0
+      && requiredFields.every((field) => field.required)
       && fieldEntries.every((field) => field.name.trim().length > 0 && field.value.trim().length > 0)
       && uniqueFieldNames.size === fieldEntries.length
     : output.draft_optout?.procedure_type === "email"
-      ? output.draft_optout.webform === undefined
+      ? output.draft_optout.submission_channel === "email"
+        && output.draft_optout.webform === undefined
+        && requiredFields.length > 0
+        && requiredFields.every((field) => field.required)
       : false;
 
   const checks = {

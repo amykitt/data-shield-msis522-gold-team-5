@@ -239,8 +239,11 @@ describe("agent evaluation harness", () => {
         site: fastPeopleSearchFixture.site,
         candidate_url: fastPeopleSearchFixture.candidateUrl,
         status: fixture.status,
-        confirmation: fixture.confirmation,
-        error: fixture.error,
+        manual_review_required: fixture.manual_review_required,
+        confirmation_text: fixture.confirmation_text,
+        ticket_ids: fixture.ticket_ids,
+        screenshot_ref: fixture.screenshot_ref,
+        error_text: fixture.error_text,
       },
     });
 

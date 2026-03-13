@@ -23,12 +23,11 @@ const sharedExecutionResult: ExecutionResult = {
   site: "FastPeopleSearch",
   candidate_url: "https://fastpeoplesearch.test/listing/possible-jane-doe",
   status: "manual_required",
-  confirmation: {
-    ticket: null,
-    page_text: "Manual review required.",
-    screenshot_ref: null,
-  },
-  error: null,
+  manual_review_required: true,
+  confirmation_text: "Manual review required.",
+  ticket_ids: [],
+  screenshot_ref: null,
+  error_text: null,
 };
 
 const fixtureArtifactPath = (...pathSegments: string[]) =>
@@ -144,12 +143,11 @@ export const emailDraftQualityFixture = {
 export const executionInterpretationFixtures = {
   clearSuccess: {
     status: "submitted" as const,
-    confirmation: {
-      ticket: "FPS-12345",
-      page_text: "Your request has been received and submitted successfully.",
-      screenshot_ref: "fixtures/fastpeoplesearch-success.png",
-    },
-    error: null,
+    manual_review_required: false,
+    confirmation_text: "Your request has been received and submitted successfully.",
+    ticket_ids: ["FPS-12345"],
+    screenshot_ref: "fixtures/fastpeoplesearch-success.png",
+    error_text: null,
     expected: {
       nextStatus: "submitted" as const,
       nextAction: "none" as const,
@@ -157,12 +155,11 @@ export const executionInterpretationFixtures = {
   },
   pendingConfirmation: {
     status: "pending" as const,
-    confirmation: {
-      ticket: null,
-      page_text: "Check your inbox to finish confirming this request.",
-      screenshot_ref: null,
-    },
-    error: null,
+    manual_review_required: false,
+    confirmation_text: "Check your inbox to finish confirming this request.",
+    ticket_ids: [],
+    screenshot_ref: null,
+    error_text: null,
     expected: {
       nextStatus: "pending" as const,
       nextAction: "await_confirmation" as const,
@@ -170,12 +167,11 @@ export const executionInterpretationFixtures = {
   },
   failureWithRetry: {
     status: "failed" as const,
-    confirmation: {
-      ticket: null,
-      page_text: "Temporary submission error. Please try again.",
-      screenshot_ref: null,
-    },
-    error: "Network timeout",
+    manual_review_required: false,
+    confirmation_text: "Temporary submission error. Please try again.",
+    ticket_ids: [],
+    screenshot_ref: null,
+    error_text: "Network timeout",
     expected: {
       nextStatus: "failed" as const,
       nextAction: "retry" as const,
@@ -183,12 +179,11 @@ export const executionInterpretationFixtures = {
   },
   captchaRequired: {
     status: "failed" as const,
-    confirmation: {
-      ticket: null,
-      page_text: "CAPTCHA required before submission can continue.",
-      screenshot_ref: null,
-    },
-    error: "CAPTCHA challenge encountered",
+    manual_review_required: true,
+    confirmation_text: "CAPTCHA required before submission can continue.",
+    ticket_ids: [],
+    screenshot_ref: null,
+    error_text: "CAPTCHA challenge encountered",
     expected: {
       nextStatus: "manual_required" as const,
       nextAction: "request_user_review" as const,
@@ -197,12 +192,11 @@ export const executionInterpretationFixtures = {
   },
   unclearEvidence: {
     status: "submitted" as const,
-    confirmation: {
-      ticket: null,
-      page_text: null,
-      screenshot_ref: null,
-    },
-    error: null,
+    manual_review_required: false,
+    confirmation_text: null,
+    ticket_ids: [],
+    screenshot_ref: null,
+    error_text: null,
     expected: {
       nextStatus: "pending" as const,
       nextAction: "await_confirmation" as const,

@@ -86,9 +86,12 @@ export const triggerRescanResponseSchema = z.object({
   events: z.array(workflowEventSchema).default([]),
 });
 
-export const appendExecutionResultRequestSchema = executionResultSchema.extend({
-  handoffId: z.string().min(1).optional(),
-});
+export const appendExecutionResultRequestSchema = z.intersection(
+  executionResultSchema,
+  z.object({
+    handoffId: z.string().min(1).optional(),
+  }),
+);
 
 export const appendExecutionResultResponseSchema = z.object({
   run: agentRunStateSchema,

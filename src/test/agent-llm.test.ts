@@ -41,7 +41,15 @@ describe("prompt-backed workflow nodes", () => {
       draft_generator: {
         site: "FastPeopleSearch",
         candidate_url: "https://example.com/listing/jane-doe",
+        submission_channel: "email",
         procedure_type: "email",
+        required_fields: [
+          { name: "full_name", value: "Jane Doe", required: true },
+          { name: "privacy_email", value: "shield-abc123@detraceme.io", required: true },
+        ],
+        optional_fields: [],
+        manual_review_required: false,
+        review_reasons: [],
         email: {
           to: "privacy@fastpeoplesearch.test",
           subject: "Removal request for Jane Doe",
@@ -91,12 +99,11 @@ describe("prompt-backed workflow nodes", () => {
           site: "FastPeopleSearch",
           candidate_url: "https://example.com/listing/jane-doe",
           status: "pending",
-          confirmation: {
-            ticket: null,
-            page_text: "Request received",
-            screenshot_ref: null,
-          },
-          error: null,
+          manual_review_required: false,
+          confirmation_text: "Request received",
+          ticket_ids: [],
+          screenshot_ref: null,
+          error_text: null,
         },
       },
     });
