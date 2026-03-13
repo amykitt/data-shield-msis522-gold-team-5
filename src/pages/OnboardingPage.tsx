@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { useAuth } from "@/lib/auth-context";
-import { US_STATES } from "@/lib/mock-data";
+import { US_STATES, generateProxyEmail } from "@/lib/mock-data";
 import { useStartAgentRun } from "@/hooks/use-agent-dashboard";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -43,14 +43,7 @@ export default function OnboardingPage() {
   const handleSubmit = async () => {
     if (!isValid) return;
 
-    completeOnboarding({
-      firstName,
-      lastName,
-      city,
-      identifierType,
-      state,
-      dob: dob || undefined,
-    });
+    const proxyEmail = generateProxyEmail();
 
     try {
       const response = await startRunMutation.mutateAsync({
@@ -62,7 +55,7 @@ export default function OnboardingPage() {
             state: identifierType === "state" ? state : "Washington",
           },
           approx_age: null,
-          privacy_email: `shield-${Math.random().toString(36).slice(2, 8)}@detraceme.io`,
+          privacy_email: proxyEmail,
           optional: {
             phone_last4: null,
             prior_cities: [],
@@ -73,7 +66,17 @@ export default function OnboardingPage() {
         requested_sites: ["fastpeoplesearch", "spokeo", "radaris"],
       });
 
-      attachRun(response.run.runId, response.run.profile.proxyEmail);
+      completeOnboarding({
+        firstName,
+        lastName,
+        city,
+        identifierType,
+        state,
+        dob: dob || undefined,
+      }, {
+        proxyEmail: response.run.profile.proxyEmail ?? proxyEmail,
+      });
+      attachRun(response.run.runId, response.run.profile.proxyEmail ?? proxyEmail);
       toast.success("Your first scan has been created.");
       navigate("/dashboard");
     } catch (error) {

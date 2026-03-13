@@ -18,7 +18,7 @@ interface AuthContextType {
   user: UserProfile | null;
   login: () => void;
   logout: () => void;
-  completeOnboarding: (data: Omit<UserProfile, "proxyEmail" | "onboarded">) => void;
+  completeOnboarding: (data: Omit<UserProfile, "proxyEmail" | "onboarded">, options?: { proxyEmail?: string }) => void;
   attachRun: (runId: string, proxyEmail?: string) => void;
 }
 
@@ -62,10 +62,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const completeOnboarding = useCallback(
-    (data: Omit<UserProfile, "proxyEmail" | "onboarded">) => {
+    (data: Omit<UserProfile, "proxyEmail" | "onboarded">, options?: { proxyEmail?: string }) => {
       setUser({
         ...data,
-        proxyEmail: generateProxyEmail(),
+        proxyEmail: options?.proxyEmail ?? generateProxyEmail(),
         onboarded: true,
       });
     },
