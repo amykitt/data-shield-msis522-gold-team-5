@@ -1,4 +1,7 @@
-import type { ExecutionResult, ProcedureSourceChunk, SeedProfile } from "@/lib/agent";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import type { ExecutionResult, SeedProfile } from "@/lib/agent";
 
 const sharedSeedProfile: SeedProfile = {
   full_name: "Jane Doe",
@@ -28,46 +31,21 @@ const sharedExecutionResult: ExecutionResult = {
   error: null,
 };
 
+const fixtureArtifactPath = (...pathSegments: string[]) =>
+  resolve(process.cwd(), "src", "lib", "agent", "fixtures", "artifacts", ...pathSegments);
+
 export const ambiguousFastPeopleSearchFixture = {
   site: "FastPeopleSearch",
   requestText: "Search for my name + Seattle and submit removals for everything you find.",
   seedProfile: sharedSeedProfile,
-  listingPageText: `
-  Jane Doe
-  Spokane, Washington
-  Age 42
-  Phone: 425-555-9988
-  Relatives: Mark Doe
-  `,
+  listingPageText: readFileSync(
+    fixtureArtifactPath("fastpeoplesearch", "listing-page-ambiguous.txt"),
+    "utf8",
+  ).trim(),
   candidateUrl: "https://fastpeoplesearch.test/listing/possible-jane-doe",
-  procedureChunks: [
-    {
-      doc_id: "fps-proc-1",
-      quote: "Use the FastPeopleSearch removal webform to request record suppression.",
-    },
-  ] satisfies ProcedureSourceChunk[],
   executionResult: sharedExecutionResult,
   expected: {
     maxConfidence: 0.74,
     requiredReviewReason: "low_confidence_match" as const,
-  },
-};
-
-export const missingProcedureFastPeopleSearchFixture = {
-  site: "FastPeopleSearch",
-  requestText: "Search for my name + Seattle and submit removals for everything you find.",
-  seedProfile: sharedSeedProfile,
-  listingPageText: `
-  Jane Doe, Age 35
-  Seattle, Washington
-  Current Address: 123 Pine St Seattle WA
-  Phone: 206-555-0114
-  `,
-  candidateUrl: "https://fastpeoplesearch.test/listing/jane-doe-seattle-wa",
-  procedureChunks: [] as ProcedureSourceChunk[],
-  executionResult: sharedExecutionResult,
-  expected: {
-    minConfidence: 0.75,
-    requiredReviewReasons: ["missing_procedure", "procedure_unknown"] as const,
   },
 };

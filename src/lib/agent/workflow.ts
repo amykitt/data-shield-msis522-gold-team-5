@@ -3,6 +3,7 @@ import { z } from "zod";
 import {
   discoveryResultSchema,
   executionResultSchema,
+  matchDecisionSchema,
   procedureSourceChunkSchema,
   reviewReasonSchema,
   submissionPayloadSchema,
@@ -11,11 +12,13 @@ import {
   type DraftOptOutInput,
   type DraftOptOutOutput,
   type ExecutionResult,
+  type MatchDecision,
   type InterpretResultInput,
   type InterpretResultOutput,
   type PlanSubmissionInput,
   type PlanSubmissionOutput,
   type ProcedureRetrieval,
+  type ReviewReason,
   type RetrieveProcedureInput,
   type RetrieveProcedureOutput,
   type SeedProfile,
@@ -66,6 +69,7 @@ export const workflowRunOutputSchema = z.object({
     approved_for_submission: z.boolean(),
   }),
   discovery_parse: discoveryResultSchema,
+  match_decision: matchDecisionSchema.nullable(),
   retrieve_procedure: z.object({
     site: z.string().min(1),
     procedure_type: z.enum(["email", "webform", "procedure_unknown"]),
@@ -149,6 +153,89 @@ function extractRelatives(pageText: string) {
   const relativeSection = pageText.match(/relatives?:\s*([^\n]+)/i)?.[1];
   if (!relativeSection) return [];
   return unique(relativeSection.split(/,|;/).map((value) => value.trim()).filter((value) => value.length > 1));
+}
+
+function toSiteId(site: string) {
+  return site.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
+}
+
+function toCandidateId(url: string) {
+  return url;
+}
+
+function classifyMatchDecision(
+  found: boolean,
+  confidence: number,
+): "exact_match" | "likely_match" | "possible_match" | "no_match" {
+  if (!found) return "no_match";
+  if (confidence >= 0.9) return "exact_match";
+  if (confidence >= 0.75) return "likely_match";
+  return "possible_match";
+}
+
+function buildMatchRationale(
+  decision: "exact_match" | "likely_match" | "possible_match" | "no_match",
+  candidate: DiscoveryCandidate | null,
+  seedProfile: SeedProfile,
+) {
+  if (!candidate || decision === "no_match") {
+    return `No reliable ${seedProfile.full_name} match was found in the captured listing artifact.`;
+  }
+
+  return `Captured listing matched ${candidate.extracted.name} with confidence ${candidate.match_confidence.toFixed(2)} based on name, location, and available profile evidence.`;
+}
+
+function buildMatchDecision(
+  site: string,
+  pageUrl: string,
+  discoveryResult: DiscoveryResult,
+  seedProfile: SeedProfile,
+  reviewReasons: ReviewReason[],
+): MatchDecision | null {
+  const candidate = discoveryResult.candidates[0] ?? null;
+  const decision = classifyMatchDecision(discoveryResult.found, candidate?.match_confidence ?? 0);
+
+  if (!candidate) {
+    return {
+      siteId: toSiteId(site),
+      candidateId: toCandidateId(pageUrl),
+      decision,
+      confidence: 0,
+      rationale: buildMatchRationale(decision, null, seedProfile),
+      evidence: [
+        {
+          sourceType: "listing_page",
+          sourceUrl: pageUrl,
+          excerpt: discoveryResult.notes ?? "No likely match found in extracted page text.",
+          capturedAt: discoveryResult.scan_timestamp,
+          fields: [],
+        },
+      ],
+      reviewReasons: unique(reviewReasons),
+    };
+  }
+
+  return {
+    siteId: toSiteId(site),
+    candidateId: toCandidateId(candidate.url),
+    decision,
+    confidence: candidate.match_confidence,
+    rationale: buildMatchRationale(decision, candidate, seedProfile),
+    evidence: candidate.evidence_snippets.map((snippet) => ({
+      sourceType: "listing_page",
+      sourceUrl: candidate.url,
+      excerpt: snippet,
+      capturedAt: discoveryResult.scan_timestamp,
+      fields: [
+        { field: "full_name", value: candidate.extracted.name },
+        ...(candidate.extracted.age ? [{ field: "approx_age", value: candidate.extracted.age }] : []),
+        ...candidate.extracted.addresses.map((address) => ({ field: "address", value: address })),
+        ...candidate.extracted.relatives.map((relative) => ({ field: "relative", value: relative })),
+        ...candidate.extracted.phones.map((phone) => ({ field: "phone", value: phone })),
+      ],
+    })),
+    reviewReasons: unique(reviewReasons),
+  };
 }
 
 function buildQuery(seedProfile: SeedProfile) {
@@ -396,6 +483,7 @@ export function createAgentWorkflow(options: AgentWorkflowOptions = {}) {
       );
 
       let retrieveProcedure: ProcedureRetrieval | null = null;
+      let matchDecision: MatchDecision | null = null;
       let draftOptOut: DraftOptOutOutput | null = null;
       let planSubmission: PlanSubmissionOutput | null = null;
       let interpretResult: InterpretResultOutput | null = null;
@@ -405,6 +493,14 @@ export function createAgentWorkflow(options: AgentWorkflowOptions = {}) {
       if (confidenceBelowThreshold) {
         context.review_reasons = unique([...context.review_reasons, "low_confidence_match"]);
       }
+
+      matchDecision = buildMatchDecision(
+        parsedInput.site_input.site,
+        parsedInput.site_input.page_url,
+        discoveryParse,
+        parsedInput.seed_profile,
+        context.review_reasons,
+      );
 
       if (discoveryParse.found && topCandidate && !confidenceBelowThreshold) {
         const procedureResolution = await procedureRetriever(
@@ -480,6 +576,7 @@ export function createAgentWorkflow(options: AgentWorkflowOptions = {}) {
         context,
         validate_consent: validateConsent,
         discovery_parse: discoveryParse,
+        match_decision: matchDecision,
         retrieve_procedure: retrieveProcedure,
         draft_optout: draftOptOut,
         plan_submission: planSubmission,

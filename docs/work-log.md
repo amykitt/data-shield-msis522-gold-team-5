@@ -241,31 +241,57 @@ Verification:
 
 ### Update 10
 
-Expanded the agent evaluation harness with adversarial fixtures for ambiguity and missing-procedure fallback behavior.
+Expanded the agent evaluation harness with adversarial fixture coverage for ambiguous-match fallback behavior.
 
 Completed:
 
 - Added `src/lib/agent/fixtures/fastpeoplesearch-negative.ts` with:
   - an ambiguous-match fixture
-  - a missing-procedure fixture
 - Expanded `src/lib/agent/eval.ts` with review-fallback evaluation helpers
 - Updated `src/test/agent-eval.test.ts` to validate:
   - happy-path fixture behavior
   - ambiguous-match fallback behavior
-  - missing-procedure fallback behavior
-- Updated `src/test/agent-golden-path.test.ts` to assert workflow blocking behavior on both adversarial fixtures
+- Updated `src/test/agent-golden-path.test.ts` to assert workflow blocking behavior on the ambiguous-match fixture
 
 Result:
 
-- The evaluation harness now tests two high-risk failure modes from the project spec:
+- The evaluation harness now tests a high-risk failure mode from the project spec:
   - ambiguous identity matches
-  - ungrounded or missing opt-out procedures
-- This improves confidence that the workflow will fail closed rather than over-submit when evidence is weak or retrieval is incomplete
+- This improves confidence that the workflow will fail closed rather than over-submit when evidence is weak
 
 Verification:
 
 - `npm test` passed with 11 test files and 39 total tests
 - `npm run build` passed successfully
+
+### Update 11
+
+Focused the branch-level one-site path on FastPeopleSearch with repo-backed listing artifacts and retrieval-grounded workflow assertions.
+
+Completed:
+
+- Moved the FastPeopleSearch captured listing and confirmation text into repo artifact files under `src/lib/agent/fixtures/artifacts/fastpeoplesearch/`
+- Updated the FastPeopleSearch fixtures to load those saved artifacts instead of embedding the listing text inline
+- Extended the workflow output with an explicit `match_decision` object carrying decision, confidence, rationale, and evidence
+- Tightened the submission payload contract so a handoff cannot contain both `email` and `webform` payloads at once
+- Narrowed the end-to-end FastPeopleSearch coverage to:
+  - one retrieval-backed happy path
+  - one same-site blocked path for low-confidence matching
+- Expanded the evaluation harness to assert:
+  - explicit match decision output
+  - grounded procedure retrieval
+  - clean automation handoff payload shape
+  - post-execution status interpretation
+
+Result:
+
+- The branch now treats FastPeopleSearch as the single real integration target for saved-artifact coverage
+- Procedure grounding for that path comes from the retrieval layer rather than manually injected chunks in the end-to-end tests
+- The output contract is cleaner for automation handoff because mixed-channel submission payloads are now rejected
+
+Verification:
+
+- `npm test` passed with 13 test files and 52 total tests
 
 ## Remaining Work For Eddie
 

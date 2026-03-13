@@ -57,10 +57,15 @@ describe("agent workflow skeleton", () => {
 
     expect(result.validate_consent.approved_for_submission).toBe(true);
     expect(result.discovery_parse.found).toBe(true);
+    expect(result.match_decision).toMatchObject({
+      decision: "exact_match",
+      confidence: result.discovery_parse.candidates[0]?.match_confidence,
+    });
     expect(result.discovery_parse.candidates[0]?.match_confidence).toBeGreaterThanOrEqual(0.75);
     expect(result.retrieve_procedure?.procedure_type).toBe("webform");
     expect(result.retrieve_procedure?.source_chunks.length).toBeGreaterThan(0);
     expect(result.draft_optout?.webform?.fields.some((field) => field.name === "privacy_email")).toBe(true);
+    expect(result.draft_optout?.email).toBeUndefined();
     expect(result.plan_submission?.requires_manual_review).toBe(false);
     expect(result.interpret_result?.next_status).toBe("pending");
     expect(result.interpret_result?.next_action).toBe("await_confirmation");
@@ -110,6 +115,10 @@ describe("agent workflow skeleton", () => {
     });
 
     expect(result.discovery_parse.candidates[0]?.match_confidence).toBeLessThan(0.75);
+    expect(result.match_decision).toMatchObject({
+      decision: "possible_match",
+      confidence: result.discovery_parse.candidates[0]?.match_confidence,
+    });
     expect(result.retrieve_procedure).toBeNull();
     expect(result.draft_optout).toBeNull();
     expect(result.context.review_reasons).toContain("low_confidence_match");

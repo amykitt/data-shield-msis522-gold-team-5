@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import type { DiscoveryResult, ExecutionResult, ProcedureSourceChunk, SeedProfile } from "@/lib/agent";
 
 export const fastPeopleSearchSeedProfile: SeedProfile = {
@@ -16,14 +19,13 @@ export const fastPeopleSearchSeedProfile: SeedProfile = {
   consent: true,
 };
 
-export const fastPeopleSearchListingPageText = `
-Jane Doe, Age 35
-Seattle, Washington
-Current Address: 123 Pine St Seattle WA
-Previous City: Tacoma WA
-Phone: 206-555-0114
-Relatives: John Doe, Mary Doe
-`;
+const fixtureArtifactPath = (...pathSegments: string[]) =>
+  resolve(process.cwd(), "src", "lib", "agent", "fixtures", "artifacts", ...pathSegments);
+
+export const fastPeopleSearchListingPageText = readFileSync(
+  fixtureArtifactPath("fastpeoplesearch", "listing-page.txt"),
+  "utf8",
+).trim();
 
 export const fastPeopleSearchCandidateUrl = "https://fastpeoplesearch.test/listing/jane-doe-seattle-wa";
 
@@ -44,7 +46,7 @@ export const fastPeopleSearchExecutionResult: ExecutionResult = {
   status: "pending",
   confirmation: {
     ticket: null,
-    page_text: "Your removal request has been received and is pending review.",
+    page_text: readFileSync(fixtureArtifactPath("fastpeoplesearch", "confirmation-page.txt"), "utf8").trim(),
     screenshot_ref: "fixtures/fastpeoplesearch-confirmation.png",
   },
   error: null,
@@ -65,6 +67,7 @@ export const fastPeopleSearchFixture = {
   executionResult: fastPeopleSearchExecutionResult,
   expected: {
     minConfidence: 0.75,
+    decision: "exact_match" as const,
     procedureType: "webform" as const,
     requiredFieldNames: ["full_name", "privacy_email"],
     nextStatus: "pending" as const,
