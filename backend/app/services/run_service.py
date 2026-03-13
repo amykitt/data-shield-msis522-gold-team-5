@@ -40,6 +40,20 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _normalize_contract_value(value: object) -> object:
+    if isinstance(value, dict):
+        return {
+            key: _normalize_contract_value(item)
+            for key, item in value.items()
+            if item is not None
+        }
+    if isinstance(value, list):
+        return [_normalize_contract_value(item) for item in value]
+    if isinstance(value, str) and value.endswith("+00:00"):
+        return f"{value[:-6]}Z"
+    return value
+
+
 def _split_name(full_name: str) -> tuple[str, str]:
     parts = [part for part in full_name.strip().split(" ") if part]
     if not parts:
@@ -671,14 +685,14 @@ def build_run_state(run: AgentRun) -> AgentRunStateRead:
         currentPhase=run.current_phase,
         status=run.status,
         consentConfirmed=run.consent_confirmed,
-        targets=run.targets or [],
-        candidates=run.candidates or [],
-        matchDecisions=run.match_decisions or [],
-        procedures=run.procedures or [],
-        drafts=run.drafts or [],
-        handoffs=run.handoffs or [],
-        outcomes=run.outcomes or [],
-        pendingReviewReasons=run.pending_review_reasons or [],
+        targets=_normalize_contract_value(run.targets or []),
+        candidates=_normalize_contract_value(run.candidates or []),
+        matchDecisions=_normalize_contract_value(run.match_decisions or []),
+        procedures=_normalize_contract_value(run.procedures or []),
+        drafts=_normalize_contract_value(run.drafts or []),
+        handoffs=_normalize_contract_value(run.handoffs or []),
+        outcomes=_normalize_contract_value(run.outcomes or []),
+        pendingReviewReasons=_normalize_contract_value(run.pending_review_reasons or []),
         timeline=timeline,
         createdAt=run.created_at,
         updatedAt=run.updated_at,

@@ -43,6 +43,11 @@ def test_start_run_and_fetch_it() -> None:
         assert len(body["run"]["handoffs"]) == 2
         assert body["run"]["currentPhase"] == "approval"
         assert any(event["phase"] == "retrieve_procedure" for event in body["events"])
+        assert body["run"]["candidates"][0]["evidence"][0]["capturedAt"].endswith("Z")
+        assert body["run"]["procedures"][0]["retrievedAt"].endswith("Z")
+        assert body["run"]["drafts"][0]["generatedAt"].endswith("Z")
+        assert body["run"]["handoffs"][0]["createdAt"].endswith("Z")
+        assert body["run"]["handoffs"][0]["payload"]["draft"]["generatedAt"].endswith("Z")
 
         get_response = client.get(f"/api/agent/runs/{run_id}")
         assert get_response.status_code == 200

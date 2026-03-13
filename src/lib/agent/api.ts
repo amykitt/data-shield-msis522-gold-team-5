@@ -70,9 +70,9 @@ export const backendProcedureRecordSchema = z.object({
   updated_at: z.string().datetime(),
   channel_hint: z.enum(["email", "webform", "unknown"]),
   source_chunks: z.array(backendProcedureSourceChunkSchema).default([]),
-  score: z.number().optional(),
-  lexical_score: z.number().optional(),
-  embedding_score: z.number().optional(),
+  score: z.number().nullable().optional(),
+  lexical_score: z.number().nullable().optional(),
+  embedding_score: z.number().nullable().optional(),
   freshness_days: z.number().int().nonnegative().optional(),
   summary: z.string().optional(),
 });
