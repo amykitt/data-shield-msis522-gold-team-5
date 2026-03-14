@@ -1,5 +1,3 @@
-import { chromium } from "playwright";
-
 import type { SeedProfile } from "@/lib/agent/contracts";
 import { hasAntiBotInterstitialSignal, hasBlockedAccessSignal } from "@/lib/automation/sites/shared";
 
@@ -108,6 +106,7 @@ export async function captureLiveDiscoveryArtifact(input: {
   const timeoutMs = input.timeoutMs ?? DEFAULT_DISCOVERY_TIMEOUT_MS;
   let browser: import("playwright").Browser | null = null;
   try {
+    const { chromium } = await import("playwright");
     browser = await chromium.launch({ headless: true });
     const searchPage = await browser.newPage();
     const searchUrl = `${SEARCH_ENGINE_URL}?q=${encodeURIComponent(buildSearchQuery(input.site, input.seedProfile))}`;

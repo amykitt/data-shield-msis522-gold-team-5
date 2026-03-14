@@ -67,7 +67,6 @@ import {
   type AgentLlmEnvLike,
 } from "@/lib/agent/llm-config";
 import { createWorkflowAutomationHandoff } from "@/lib/automation/handoff";
-import { executeAutomation } from "@/lib/automation/runner";
 import type { ExecuteAutomationOptions } from "@/lib/automation/types";
 
 const workflowLegacySiteInputSchema = z.object({
@@ -2192,6 +2191,7 @@ export function createAgentWorkflow(options: AgentWorkflowOptions = {}) {
       input: WorkflowRunInput,
       runtime?: { checkpoint?: WorkflowCheckpointConfig } & WorkflowAutomationRunOptions,
     ): Promise<WorkflowRunOutput> {
+      const { executeAutomation } = await import("@/lib/automation/runner");
       const initial = await this.run(input, runtime);
       const automationRecords = new Map<string, WorkflowAutomationRecord>();
       const parsedInput = workflowRunInputSchema.parse(input);
@@ -2283,4 +2283,3 @@ export function createAgentWorkflow(options: AgentWorkflowOptions = {}) {
     },
   };
 }
-
